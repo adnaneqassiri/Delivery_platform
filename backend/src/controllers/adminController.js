@@ -74,12 +74,19 @@ const createUser = async (req, res, next) => {
       });
     }
     
-    // If creating a livreur, entrepot is required
-    if (role === 'LIVREUR' && !id_entrepot) {
-      return res.status(400).json({
-        success: false,
-        message: 'id_entrepot is required for livreur'
-      });
+    // If creating a livreur or gestionnaire, entrepot can be assigned
+    if ((role === 'LIVREUR' || role === 'GESTIONNAIRE') && id_entrepot) {
+      // Validate entrepot exists
+      const entrepotCheck = await executeQuery(
+        'SELECT id_entrepot FROM entrepots WHERE id_entrepot = :id',
+        { id: parseInt(id_entrepot) }
+      );
+      if (entrepotCheck.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid entrepot id'
+        });
+      }
     }
     
     const result = await callProcedure(
@@ -105,8 +112,8 @@ const createUser = async (req, res, next) => {
       });
     }
     
-    // If livreur, assign entrepot
-    if (role === 'LIVREUR' && id_entrepot) {
+    // If livreur or gestionnaire, assign entrepot if provided
+    if ((role === 'LIVREUR' || role === 'GESTIONNAIRE') && id_entrepot) {
       await executeQuery(
         'UPDATE utilisateurs SET id_entrepot = :id_entrepot WHERE id_utilisateur = :id',
         { id_entrepot: parseInt(id_entrepot), id: result.p_id }

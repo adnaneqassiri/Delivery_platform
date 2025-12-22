@@ -17,8 +17,25 @@ const getColis = async (req, res, next) => {
 // Add colis
 const addColis = async (req, res, next) => {
   try {
-    const { id_client, poids, type, receiver_cin, ville_destination, id_entrepot_localisation } = req.body;
+    const { id_client, poids, type, receiver_cin, id_entrepot_reception } = req.body;
     const id_user = req.session.userId;
+    
+    // Get user's entrepot (if column exists)
+    let id_entrepot_expedition = req.session.id_entrepot;
+    if (!id_entrepot_expedition) {
+      try {
+        const userInfo = await executeQuery(
+          'SELECT id_entrepot FROM utilisateurs WHERE id_utilisateur = :id',
+          { id: id_user }
+        );
+        id_entrepot_expedition = userInfo[0]?.ID_ENTREPOT || null;
+        req.session.id_entrepot = id_entrepot_expedition;
+      } catch (err) {
+        // Column might not exist yet
+        console.log('id_entrepot column not found');
+        id_entrepot_expedition = null;
+      }
+    }
     
     if (!poids || poids < 1) {
       return res.status(400).json({
@@ -27,12 +44,34 @@ const addColis = async (req, res, next) => {
       });
     }
     
-    if (!receiver_cin || !ville_destination || !id_entrepot_localisation) {
+    if (!receiver_cin || !id_entrepot_reception) {
       return res.status(400).json({
         success: false,
-        message: 'receiver_cin, ville_destination, and id_entrepot_localisation are required'
+        message: 'receiver_cin and id_entrepot_reception are required'
       });
     }
+    
+    if (!id_entrepot_expedition) {
+      return res.status(400).json({
+        success: false,
+        message: 'User must be assigned to an entrepot (Entrepôt d\'expédition). Please contact admin to assign an entrepot to your account.'
+      });
+    }
+    
+    // Get ville_destination from entrepot_reception
+    const entrepotInfo = await executeQuery(
+      'SELECT ville FROM entrepots WHERE id_entrepot = :id',
+      { id: parseInt(id_entrepot_reception) }
+    );
+    
+    if (!entrepotInfo || entrepotInfo.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid entrepot de réception'
+      });
+    }
+    
+    const ville_destination = entrepotInfo[0].VILLE;
     
     const result = await callProcedure(
       'pkg_logitrack.p_ajouter_colis',
@@ -42,7 +81,7 @@ const addColis = async (req, res, next) => {
         p_type: type || 'STANDARD',
         p_receiver_cin: receiver_cin,
         p_ville_destination: ville_destination,
-        p_id_entrepot_localisation: id_entrepot_localisation,
+        p_id_entrepot_localisation: id_entrepot_expedition,
         p_id_user: id_user
       },
       {
@@ -192,11 +231,12 @@ const createClient = async (req, res, next) => {
   }
 };
 
-// Get entrepots for dropdown
+// Get entrepots for dropdown (all entrepots for selection)
 const getEntrepots = async (req, res, next) => {
   try {
+    // Récupérer tous les entrepôts pour le dropdown "Entrepôt de réception"
     const entrepots = await executeQuery(
-      'SELECT id_entrepot, ville, adresse FROM entrepots ORDER BY ville'
+      'SELECT id_entrepot, ville, adresse FROM entrepots ORDER BY ville, adresse'
     );
     
     res.json({
