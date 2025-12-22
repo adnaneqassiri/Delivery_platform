@@ -84,8 +84,15 @@ const ClientsManagement = () => {
     setSuccess('');
 
     try {
-      await api.post('/admin/clients', formData);
-      setSuccess('Client created successfully');
+      if (editingClient) {
+        // Update existing client
+        await api.put(`/admin/clients/${editingClient.ID_CLIENT}`, formData);
+        setSuccess('Client updated successfully');
+      } else {
+        // Create new client
+        await api.post('/admin/clients', formData);
+        setSuccess('Client created successfully');
+      }
       handleCloseModal();
       fetchClients();
       setTimeout(() => setSuccess(''), 3000);
@@ -151,7 +158,9 @@ const ClientsManagement = () => {
             <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
             <div className="fixed inset-0 flex items-center justify-center p-4">
               <Dialog.Panel className="mx-auto max-w-md rounded bg-white p-6 w-full max-h-[90vh] overflow-y-auto">
-                <Dialog.Title className="text-xl font-bold mb-4">Add Client</Dialog.Title>
+                <Dialog.Title className="text-xl font-bold mb-4">
+                  {editingClient ? 'Edit Client' : 'Add Client'}
+                </Dialog.Title>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
@@ -234,7 +243,7 @@ const ClientsManagement = () => {
                       type="submit"
                       className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
                     >
-                      Create
+                      {editingClient ? 'Update' : 'Create'}
                     </button>
                   </div>
                 </form>

@@ -274,6 +274,81 @@ const createClient = async (req, res, next) => {
   }
 };
 
+// Update client
+const updateClient = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { prenom, nom, cin, telephone, email, adresse } = req.body;
+    
+    if (!prenom || !nom) {
+      return res.status(400).json({
+        success: false,
+        message: 'prenom and nom are required'
+      });
+    }
+    
+    // Check if CIN is being changed and if it conflicts with another client
+    if (cin) {
+      const existing = await executeQuery(
+        'SELECT id_client FROM clients WHERE cin = :cin AND id_client != :id',
+        { cin, id: parseInt(id) }
+      );
+      
+      if (existing.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'CIN already exists for another client'
+        });
+      }
+    }
+    
+    const updates = [];
+    const binds = { id: parseInt(id) };
+    
+    if (prenom) {
+      updates.push('prenom = :prenom');
+      binds.prenom = prenom;
+    }
+    if (nom) {
+      updates.push('nom = :nom');
+      binds.nom = nom;
+    }
+    if (cin !== undefined) {
+      updates.push('cin = :cin');
+      binds.cin = cin || null;
+    }
+    if (telephone !== undefined) {
+      updates.push('telephone = :telephone');
+      binds.telephone = telephone || null;
+    }
+    if (email !== undefined) {
+      updates.push('email = :email');
+      binds.email = email || null;
+    }
+    if (adresse !== undefined) {
+      updates.push('adresse = :adresse');
+      binds.adresse = adresse || null;
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No fields to update'
+      });
+    }
+    
+    const query = `UPDATE clients SET ${updates.join(', ')} WHERE id_client = :id`;
+    await executeQuery(query, binds);
+    
+    res.json({
+      success: true,
+      message: 'Client updated successfully'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Get gestionnaires for dropdown
 const getGestionnaires = async (req, res, next) => {
   try {
@@ -299,6 +374,7 @@ module.exports = {
   createEntrepot,
   getClients,
   createClient,
+  updateClient,
   getGestionnaires
 };
 

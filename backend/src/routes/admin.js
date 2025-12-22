@@ -10,6 +10,7 @@ const {
   createEntrepot,
   getClients,
   createClient,
+  updateClient,
   getGestionnaires
 } = require('../controllers/adminController');
 
@@ -33,6 +34,7 @@ router.get('/gestionnaires', getGestionnaires);
 // Clients
 router.get('/clients', getClients);
 router.post('/clients', createClient);
+router.put('/clients/:id', updateClient);
 
 module.exports = router;
 
