@@ -116,10 +116,12 @@ const markColisRecuperee = async (req, res, next) => {
       });
     }
     
+    console.log('Marking colis as recovered for CIN:', receiver_cin);
+    
     await callProcedure(
       'pkg_logitrack.p_marquer_colis_recuperee',
       {
-        p_receiver_cin: receiver_cin,
+        p_receiver_cin: receiver_cin.trim(),
         p_id_user: id_user
       },
       {}
@@ -130,6 +132,7 @@ const markColisRecuperee = async (req, res, next) => {
       message: 'Colis marked as recovered successfully'
     });
   } catch (err) {
+    console.error('Error marking colis as recovered:', err.message);
     next(err);
   }
 };

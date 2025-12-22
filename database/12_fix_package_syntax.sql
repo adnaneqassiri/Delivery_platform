@@ -1,112 +1,12 @@
 --------------------------------------------------
--- PACKAGE: BUSINESS LOGIC + ROLE CONTROL + KPI
+-- FIX: Package syntax error
+-- Recreate just the p_marquer_colis_recuperee procedure
+-- This avoids potential file encoding issues
 --------------------------------------------------
 
-CREATE OR REPLACE PACKAGE pkg_logitrack AS
-
-  -- Auth
-  PROCEDURE p_creer_utilisateur(
-    p_nom  VARCHAR2,
-    p_pwd  VARCHAR2,
-    p_role VARCHAR2,
-    p_cin  VARCHAR2,
-    p_id   OUT NUMBER
-  );
-
-  PROCEDURE p_login(
-    p_nom  VARCHAR2,
-    p_pwd  VARCHAR2,
-    p_id   OUT NUMBER,
-    p_role OUT VARCHAR2
-  );
-
-  -- Entrepot
-  PROCEDURE p_creer_entrepot(
-    p_adresse VARCHAR2,
-    p_ville   VARCHAR2,
-    p_tel     VARCHAR2,
-    p_id_user NUMBER,
-    p_id      OUT NUMBER
-  );
-
-  -- Vehicule (livreur can change entrepot)
-  PROCEDURE p_creer_vehicule(
-    p_immatriculation VARCHAR2,
-    p_type            VARCHAR2,
-    p_id_entrepot     NUMBER,
-    p_id              OUT NUMBER
-  );
-
-  PROCEDURE p_changer_entrepot_vehicule(
-    p_id_vehicule NUMBER,
-    p_id_entrepot NUMBER,
-    p_id_user     NUMBER
-  );
-
-  -- Clients
-  PROCEDURE p_creer_client(
-    p_prenom VARCHAR2,
-    p_nom    VARCHAR2,
-    p_cin    VARCHAR2,
-    p_tel    VARCHAR2,
-    p_email  VARCHAR2,
-    p_adresse VARCHAR2,
-    p_id_gestionnaire NUMBER,
-    p_id     OUT NUMBER
-  );
-
-  -- Livraisons
-  PROCEDURE p_creer_combinaisons_livraisons;
-
-  PROCEDURE p_prendre_livraison(
-    p_id_livraison NUMBER,
-    p_id_livreur   NUMBER,
-    p_id_vehicule  NUMBER
-  );
-
-  PROCEDURE p_livrer_livraison(
-    p_id_livraison NUMBER,
-    p_id_user      NUMBER
-  );
-
-  PROCEDURE p_modifier_statut_livraison(
-    p_id_livraison NUMBER,
-    p_statut       VARCHAR2,
-    p_id_user      NUMBER
-  );
-
-  -- Colis
-  PROCEDURE p_ajouter_colis(
-    p_id_client               NUMBER,
-    p_poids                   NUMBER,
-    p_type                    VARCHAR2,
-    p_receiver_cin            VARCHAR2,
-    p_ville_destination       VARCHAR2,
-    p_id_entrepot_localisation NUMBER,
-    p_id_user                 NUMBER,
-    p_id_colis                OUT NUMBER
-  );
-
-  PROCEDURE p_modifier_statut_colis(
-    p_id_colis NUMBER,
-    p_statut   VARCHAR2,
-    p_id_user  NUMBER
-  );
-
-  PROCEDURE p_marquer_colis_recuperee(
-    p_receiver_cin VARCHAR2,
-    p_id_user      NUMBER
-  );
-
-  -- KPI
-  PROCEDURE p_get_kpis(p_cur OUT SYS_REFCURSOR);
-
-END pkg_logitrack;
-/
-
+-- Drop and recreate the package body
 CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
 
-  -- helper: get role
   FUNCTION f_role(p_id_user NUMBER) RETURN VARCHAR2 IS
     v_role VARCHAR2(20);
   BEGIN
@@ -348,7 +248,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
       RAISE_APPLICATION_ERROR(-20008, 'Seul gestionnaire/admin peut marquer recuperee');
     END IF;
 
-    -- Update all colis with matching CIN (case-insensitive, trimmed) and LIVRE status
     FOR r IN (
       SELECT id_colis, statut
       FROM colis
@@ -365,7 +264,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
       v_count := v_count + 1;
     END LOOP;
     
-    -- Raise error if no colis found
     IF v_count = 0 THEN
       RAISE_APPLICATION_ERROR(-20009, 'Aucun colis trouve avec CIN ' || p_receiver_cin || ' et statut LIVRE');
     END IF;
@@ -382,7 +280,5 @@ END pkg_logitrack;
 
 COMMIT;
 
-PROMPT Package created successfully!
-
-
+PROMPT Package body recreated successfully!
 

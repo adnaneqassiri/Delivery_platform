@@ -45,7 +45,12 @@ const getKPIs = async (req, res, next) => {
 const getUsers = async (req, res, next) => {
   try {
     const users = await executeQuery(
-      'SELECT id_utilisateur, nom_utilisateur, role, cin, actif, date_creation FROM utilisateurs ORDER BY id_utilisateur'
+      `SELECT u.id_utilisateur, u.nom_utilisateur, u.role, u.cin, u.actif, 
+              u.date_creation, u.id_entrepot,
+              e.ville || ' - ' || e.adresse AS entrepot_nom
+       FROM utilisateurs u
+       LEFT JOIN entrepots e ON u.id_entrepot = e.id_entrepot
+       ORDER BY u.id_utilisateur`
     );
     
     res.json({
@@ -60,12 +65,20 @@ const getUsers = async (req, res, next) => {
 // Create user
 const createUser = async (req, res, next) => {
   try {
-    const { nom_utilisateur, mot_de_passe, role, cin } = req.body;
+    const { nom_utilisateur, mot_de_passe, role, cin, id_entrepot } = req.body;
     
     if (!nom_utilisateur || !mot_de_passe || !role) {
       return res.status(400).json({
         success: false,
         message: 'nom_utilisateur, mot_de_passe, and role are required'
+      });
+    }
+    
+    // If creating a livreur, entrepot is required
+    if (role === 'LIVREUR' && !id_entrepot) {
+      return res.status(400).json({
+        success: false,
+        message: 'id_entrepot is required for livreur'
       });
     }
     
@@ -84,21 +97,20 @@ const createUser = async (req, res, next) => {
     
     console.log('Create user result:', result);
     
-    if (!result || !result.p_id) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create user - no ID returned'
-      });
-    }
-    
-    console.log('Create user - result.p_id:', result.p_id);
-    
     if (!result || result.p_id === undefined || result.p_id === null) {
       console.error('Create user failed - invalid result:', result);
       return res.status(500).json({
         success: false,
         message: 'Failed to create user - invalid response from database'
       });
+    }
+    
+    // If livreur, assign entrepot
+    if (role === 'LIVREUR' && id_entrepot) {
+      await executeQuery(
+        'UPDATE utilisateurs SET id_entrepot = :id_entrepot WHERE id_utilisateur = :id',
+        { id_entrepot: parseInt(id_entrepot), id: result.p_id }
+      );
     }
     
     res.json({
@@ -115,7 +127,7 @@ const createUser = async (req, res, next) => {
 const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { actif, role, cin } = req.body;
+    const { actif, role, cin, id_entrepot } = req.body;
     
     const updates = [];
     const binds = { id: parseInt(id) };
@@ -133,6 +145,11 @@ const updateUser = async (req, res, next) => {
     if (cin !== undefined) {
       updates.push('cin = :cin');
       binds.cin = cin || null;
+    }
+    
+    if (id_entrepot !== undefined) {
+      updates.push('id_entrepot = :id_entrepot');
+      binds.id_entrepot = id_entrepot ? parseInt(id_entrepot) : null;
     }
     
     if (updates.length === 0) {
