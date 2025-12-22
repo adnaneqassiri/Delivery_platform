@@ -1,8 +1,23 @@
 const errorHandler = (err, req, res, next) => {
   console.error('Error:', err);
+  console.error('Error details:', {
+    message: err.message,
+    errorNum: err.errorNum,
+    code: err.code,
+    statusCode: err.statusCode
+  });
   
   // Oracle error handling
-  if (err.errorNum) {
+  if (err.errorNum || err.code) {
+    // Check for Oracle application errors (RAISE_APPLICATION_ERROR)
+    if (err.errorNum && err.errorNum >= 20000 && err.errorNum <= 20999) {
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'Database error occurred',
+        error: err.message
+      });
+    }
+    
     return res.status(400).json({
       success: false,
       message: err.message || 'Database error occurred',

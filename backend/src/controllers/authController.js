@@ -33,10 +33,16 @@ const login = async (req, res, next) => {
       });
     }
     
-    // Store in session
+    // Store in session (normalize role to uppercase and trim)
     req.session.userId = result.p_id;
-    req.session.role = result.p_role;
+    req.session.role = result.p_role ? result.p_role.trim().toUpperCase() : null;
     req.session.nom_utilisateur = nom_utilisateur;
+    
+    console.log('Login - Session stored:', {
+      userId: req.session.userId,
+      role: req.session.role,
+      originalRole: result.p_role
+    });
     
     res.json({
       success: true,
