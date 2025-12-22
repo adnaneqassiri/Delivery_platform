@@ -82,6 +82,25 @@ const createUser = async (req, res, next) => {
       }
     );
     
+    console.log('Create user result:', result);
+    
+    if (!result || !result.p_id) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create user - no ID returned'
+      });
+    }
+    
+    console.log('Create user - result.p_id:', result.p_id);
+    
+    if (!result || result.p_id === undefined || result.p_id === null) {
+      console.error('Create user failed - invalid result:', result);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create user - invalid response from database'
+      });
+    }
+    
     res.json({
       success: true,
       data: { id: result.p_id },
@@ -234,6 +253,16 @@ const createClient = async (req, res, next) => {
         p_id: 'NUMBER'
       }
     );
+    
+    console.log('Create client - result.p_id:', result.p_id);
+    
+    if (!result || result.p_id === undefined || result.p_id === null) {
+      console.error('Create client failed - invalid result:', result);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create client - invalid response from database'
+      });
+    }
     
     res.json({
       success: true,

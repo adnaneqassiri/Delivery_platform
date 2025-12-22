@@ -90,7 +90,9 @@ const executeProcedure = async (procedureName, inParams = {}, outParams = {}) =>
     const sql = `BEGIN ${procedureName}(${paramList.join(', ')}); END;`;
     
     // Execute procedure
-    const executeResult = await connection.execute(sql, binds);
+    const executeResult = await connection.execute(sql, binds, {
+      autoCommit: true  // Auto-commit DML statements
+    });
     
     // Extract OUT parameters
     // In oracledb, OUT parameters are returned in result.outBinds
@@ -105,7 +107,7 @@ const executeProcedure = async (procedureName, inParams = {}, outParams = {}) =>
           result[key] = executeResult.outBinds[key];
         }
       }
-    } else {
+    } else if (Object.keys(outParams).length > 0) {
       // Fallback: try to get from binds object (older oracledb versions)
       for (const key of Object.keys(outParams)) {
         if (outParams[key] === 'CURSOR') {
@@ -115,6 +117,11 @@ const executeProcedure = async (procedureName, inParams = {}, outParams = {}) =>
           result[key] = binds[key];
         }
       }
+    }
+    
+    // Debug logging
+    if (Object.keys(outParams).length > 0) {
+      console.log(`Procedure ${procedureName} OUT params:`, result);
     }
     
     return result;
@@ -132,14 +139,15 @@ const executeProcedure = async (procedureName, inParams = {}, outParams = {}) =>
 };
 
 // Helper function to execute queries
-const executeQuery = async (query, binds = {}) => {
+const executeQuery = async (query, binds = {}, options = {}) => {
   const pool = getPool();
   let connection;
   
   try {
     connection = await pool.getConnection();
     const result = await connection.execute(query, binds, {
-      outFormat: oracledb.OUT_FORMAT_OBJECT
+      outFormat: oracledb.OUT_FORMAT_OBJECT,
+      autoCommit: options.autoCommit !== false  // Default to auto-commit
     });
     return result.rows;
   } catch (err) {

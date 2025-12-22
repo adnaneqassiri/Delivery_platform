@@ -50,6 +50,16 @@ const addColis = async (req, res, next) => {
       }
     );
     
+    console.log('Add colis - result.p_id_colis:', result.p_id_colis);
+    
+    if (!result || result.p_id_colis === undefined || result.p_id_colis === null) {
+      console.error('Add colis failed - invalid result:', result);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to add colis - invalid response from database'
+      });
+    }
+    
     res.json({
       success: true,
       data: { id: result.p_id_colis },
