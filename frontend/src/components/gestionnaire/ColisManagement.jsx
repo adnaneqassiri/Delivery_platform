@@ -4,12 +4,15 @@ import Sidebar from '../common/Sidebar';
 import Navbar from '../common/Navbar';
 import DataTable from '../common/DataTable';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { COLIS_STATUS, COLIS_TYPES, STATUS_COLORS } from '../../utils/constants';
 
 const ColisManagement = () => {
+  const { user } = useAuth();
   const [colis, setColis] = useState([]);
   const [clients, setClients] = useState([]);
   const [entrepots, setEntrepots] = useState([]);
+  const [userEntrepot, setUserEntrepot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
@@ -20,8 +23,7 @@ const ColisManagement = () => {
     poids: '',
     type: 'STANDARD',
     receiver_cin: '',
-    ville_destination: '',
-    id_entrepot_localisation: ''
+    id_entrepot_reception: ''
   });
   const [recoverCin, setRecoverCin] = useState('');
   const [newStatus, setNewStatus] = useState('');
@@ -32,6 +34,7 @@ const ColisManagement = () => {
     fetchColis();
     fetchClients();
     fetchEntrepots();
+    fetchUserEntrepot();
   }, []);
 
   const fetchColis = async () => {
@@ -60,12 +63,37 @@ const ColisManagement = () => {
 
   const fetchEntrepots = async () => {
     try {
+      // Récupérer tous les entrepôts (pour le dropdown Entrepôt de réception)
       const response = await api.get('/gestionnaire/entrepots');
       if (response.data.success) {
         setEntrepots(response.data.data);
       }
     } catch (err) {
       console.error('Failed to load entrepots');
+    }
+  };
+
+  const fetchUserEntrepot = async () => {
+    try {
+      // Récupérer l'entrepôt de l'utilisateur connecté
+      const response = await api.get('/auth/me');
+      if (response.data.success && response.data.data.id_entrepot) {
+        const entrepotId = response.data.data.id_entrepot;
+        // Récupérer les détails de l'entrepôt depuis la liste des entrepôts
+        const entrepotResponse = await api.get('/gestionnaire/entrepots');
+        if (entrepotResponse.data.success) {
+          const entrepot = entrepotResponse.data.data.find(
+            e => e.ID_ENTREPOT === entrepotId
+          );
+          setUserEntrepot(entrepot);
+        }
+      } else {
+        // User doesn't have an entrepot assigned
+        setUserEntrepot(null);
+      }
+    } catch (err) {
+      console.error('Failed to load user entrepot:', err);
+      setUserEntrepot(null);
     }
   };
 
@@ -79,7 +107,7 @@ const ColisManagement = () => {
         ...formData,
         poids: parseFloat(formData.poids),
         id_client: formData.id_client || null,
-        id_entrepot_localisation: parseInt(formData.id_entrepot_localisation)
+        id_entrepot_reception: parseInt(formData.id_entrepot_reception)
       });
       setSuccess('Colis added successfully');
       setIsAddModalOpen(false);
@@ -88,8 +116,7 @@ const ColisManagement = () => {
         poids: '',
         type: 'STANDARD',
         receiver_cin: '',
-        ville_destination: '',
-        id_entrepot_localisation: ''
+        id_entrepot_reception: ''
       });
       fetchColis();
       setTimeout(() => setSuccess(''), 3000);
@@ -273,22 +300,11 @@ const ColisManagement = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Destination City *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.ville_destination}
-                      onChange={(e) => setFormData({ ...formData, ville_destination: e.target.value })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Entrepot Localisation *</label>
+                    <label className="block text-sm font-medium text-gray-700">Entrepôt de réception *</label>
                     <select
                       required
-                      value={formData.id_entrepot_localisation}
-                      onChange={(e) => setFormData({ ...formData, id_entrepot_localisation: e.target.value })}
+                      value={formData.id_entrepot_reception}
+                      onChange={(e) => setFormData({ ...formData, id_entrepot_reception: e.target.value })}
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     >
                       <option value="">Select entrepot</option>
@@ -298,6 +314,21 @@ const ColisManagement = () => {
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Entrepôt d'expédition</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={userEntrepot ? `${userEntrepot.VILLE} - ${userEntrepot.ADRESSE}` : 'Non assigné'}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed"
+                    />
+                    {!userEntrepot && (
+                      <p className="mt-1 text-xs text-red-600">
+                        Vous devez être assigné à un entrepôt pour créer un colis
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex justify-end space-x-3">
