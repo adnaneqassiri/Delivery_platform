@@ -247,6 +247,20 @@ const createClient = async (req, res, next) => {
   try {
     const { prenom, nom, cin, telephone, email, adresse } = req.body;
     const id_gestionnaire = req.session.userId;
+    const userRole = req.session.role;
+    
+    console.log('Create client - Session info:', {
+      userId: id_gestionnaire,
+      role: userRole,
+      sessionId: req.sessionID
+    });
+    
+    if (!id_gestionnaire) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
     
     if (!prenom || !nom) {
       return res.status(400).json({
@@ -287,6 +301,7 @@ const createClient = async (req, res, next) => {
       message: 'Client created successfully'
     });
   } catch (err) {
+    console.error('Create client error:', err);
     next(err);
   }
 };
