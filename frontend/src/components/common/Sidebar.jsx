@@ -16,12 +16,15 @@ const Sidebar = () => {
     { path: '/admin/users', label: 'Users', icon: '👥' },
     { path: '/admin/clients', label: 'Clients', icon: '👤' },
     { path: '/admin/entrepots', label: 'Entrepots', icon: '🏢' },
+    { path: '/admin/vehicules', label: 'Vehicules', icon: '🚛' },
   ];
 
   const gestionnaireMenuItems = [
     { path: '/gestionnaire', label: 'Dashboard', icon: '📊' },
-    { path: '/gestionnaire/colis', label: 'Colis', icon: '📦' },
+    { path: '/gestionnaire/colis/expedies', label: 'Colis Expédiés', icon: '📤' },
+    { path: '/gestionnaire/colis/recus', label: 'Colis Reçus', icon: '📥' },
     { path: '/gestionnaire/clients', label: 'Clients', icon: '👤' },
+    { path: '/gestionnaire/vehicules', label: 'Vehicules', icon: '🚛' },
   ];
 
   const livreurMenuItems = [

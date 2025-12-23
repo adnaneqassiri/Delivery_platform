@@ -11,7 +11,10 @@ const {
   getClients,
   createClient,
   updateClient,
-  getGestionnaires
+  getGestionnaires,
+  getVehicules,
+  createVehicule,
+  updateVehicule
 } = require('../controllers/adminController');
 
 // All admin routes require authentication and ADMIN role
@@ -35,6 +38,11 @@ router.get('/gestionnaires', getGestionnaires);
 router.get('/clients', getClients);
 router.post('/clients', createClient);
 router.put('/clients/:id', updateClient);
+
+// Vehicules
+router.get('/vehicules', getVehicules);
+router.post('/vehicules', createVehicule);
+router.put('/vehicules/:id', updateVehicule);
 
 module.exports = router;
 

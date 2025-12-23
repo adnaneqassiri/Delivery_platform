@@ -5,14 +5,10 @@ import Navbar from '../common/Navbar';
 import DataTable from '../common/DataTable';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { COLIS_STATUS, COLIS_TYPES, STATUS_COLORS } from '../../utils/constants';
+import { COLIS_TYPES, STATUS_COLORS } from '../../utils/constants';
 
-const ColisManagement = () => {
-<<<<<<< HEAD
-  const { user } = useAuth();
-=======
+const ColisExpedies = () => {
   const { user, refreshUser } = useAuth();
->>>>>>> e2abf37e3262a183a9bb15493d4768a4f62ebff5
   const [colis, setColis] = useState([]);
   const [clients, setClients] = useState([]);
   const [entrepots, setEntrepots] = useState([]);
@@ -20,7 +16,6 @@ const ColisManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-  const [isRecoverModalOpen, setIsRecoverModalOpen] = useState(false);
   const [selectedColis, setSelectedColis] = useState(null);
   const [formData, setFormData] = useState({
     id_client: '',
@@ -29,8 +24,6 @@ const ColisManagement = () => {
     receiver_cin: '',
     id_entrepot_reception: ''
   });
-  const [recoverCin, setRecoverCin] = useState('');
-  const [newStatus, setNewStatus] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -41,10 +34,8 @@ const ColisManagement = () => {
     fetchUserEntrepot();
   }, []);
 
-  // Re-fetch user entrepot when modal opens to ensure we have latest data
   useEffect(() => {
     if (isAddModalOpen) {
-      // Refresh user data from server to get latest entrepot assignment
       refreshUser().then(() => {
         fetchUserEntrepot();
       });
@@ -53,7 +44,7 @@ const ColisManagement = () => {
 
   const fetchColis = async () => {
     try {
-      const response = await api.get('/gestionnaire/colis');
+      const response = await api.get('/gestionnaire/colis/expedies');
       if (response.data.success) {
         setColis(response.data.data);
       }
@@ -77,7 +68,6 @@ const ColisManagement = () => {
 
   const fetchEntrepots = async () => {
     try {
-      // Récupérer tous les entrepôts (pour le dropdown Entrepôt de réception)
       const response = await api.get('/gestionnaire/entrepots');
       if (response.data.success) {
         setEntrepots(response.data.data);
@@ -89,11 +79,9 @@ const ColisManagement = () => {
 
   const fetchUserEntrepot = async () => {
     try {
-      // Récupérer l'entrepôt de l'utilisateur connecté
       const response = await api.get('/auth/me');
       if (response.data.success && response.data.data.id_entrepot) {
         const entrepotId = response.data.data.id_entrepot;
-        // Récupérer les détails de l'entrepôt depuis la liste des entrepôts
         const entrepotResponse = await api.get('/gestionnaire/entrepots');
         if (entrepotResponse.data.success) {
           const entrepot = entrepotResponse.data.data.find(
@@ -102,7 +90,6 @@ const ColisManagement = () => {
           setUserEntrepot(entrepot);
         }
       } else {
-        // User doesn't have an entrepot assigned
         setUserEntrepot(null);
       }
     } catch (err) {
@@ -117,7 +104,7 @@ const ColisManagement = () => {
     setSuccess('');
 
     try {
-      await api.post('/gestionnaire/colis', {
+      await api.post('/gestionnaire/colis/expedies', {
         ...formData,
         poids: parseFloat(formData.poids),
         id_client: formData.id_client || null,
@@ -139,55 +126,39 @@ const ColisManagement = () => {
     }
   };
 
-  const handleChangeStatus = async () => {
+  const handleCancelColis = async () => {
+    if (!selectedColis) return;
+    
+    setError('');
+    setSuccess('');
+
     try {
-      await api.put(`/gestionnaire/colis/${selectedColis.ID_COLIS}/statut`, {
-        statut: newStatus
+      await api.put(`/gestionnaire/colis/expedies/${selectedColis.ID_COLIS}/statut`, {
+        statut: 'ANNULEE'
       });
-      setSuccess('Status updated successfully');
+      setSuccess('Colis cancelled successfully');
       setIsStatusModalOpen(false);
       setSelectedColis(null);
-      setNewStatus('');
       fetchColis();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update status');
-    }
-  };
-
-  const handleRecover = async (e) => {
-    e.preventDefault();
-    try {
-      await api.post('/gestionnaire/colis/recuperer', {
-        receiver_cin: recoverCin
-      });
-      setSuccess('Colis marked as recovered');
-      setIsRecoverModalOpen(false);
-      setRecoverCin('');
-      fetchColis();
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to mark as recovered');
+      setError(err.response?.data?.message || 'Failed to cancel colis');
     }
   };
 
   const columns = [
     { key: 'ID_COLIS', label: 'ID' },
     { key: 'CLIENT', label: 'Client', render: (value) => value || 'N/A' },
-    { key: 'POIDS', label: 'Weight (kg)' },
+    { key: 'POIDS', label: 'Weight (KG)' },
     { key: 'TYPE_COLIS', label: 'Type' },
-    { 
-      key: 'PRIX', 
-      label: 'Price',
-      render: (value) => value ? `${value} MAD` : 'N/A'
-    },
+    { key: 'PRIX', label: 'Price', render: (value) => value ? `${value} MAD` : 'N/A' },
     { key: 'RECEIVER_CIN', label: 'Receiver CIN' },
     { key: 'VILLE_DESTINATION', label: 'Destination' },
     { 
       key: 'STATUT', 
       label: 'Status',
       render: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${STATUS_COLORS[value] || 'bg-gray-100 text-gray-800'}`}>
+        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[value] || 'bg-gray-100 text-gray-800'}`}>
           {value}
         </span>
       )
@@ -210,7 +181,7 @@ const ColisManagement = () => {
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Navbar title="Colis Management" />
+        <Navbar title="Colis Expédiés" />
         <main className="flex-1 overflow-y-auto p-6">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -223,18 +194,12 @@ const ColisManagement = () => {
             </div>
           )}
 
-          <div className="mb-4 flex space-x-3">
+          <div className="mb-4">
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
             >
               + Add Colis
-            </button>
-            <button
-              onClick={() => setIsRecoverModalOpen(true)}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-            >
-              Mark as Recovered
             </button>
           </div>
 
@@ -243,13 +208,13 @@ const ColisManagement = () => {
             columns={columns}
             actions={[
               {
-                label: 'Change Status',
+                label: 'Cancel',
                 onClick: (row) => {
                   setSelectedColis(row);
-                  setNewStatus(row.STATUT);
                   setIsStatusModalOpen(true);
                 },
-                className: 'text-blue-600 hover:text-blue-900'
+                className: 'text-red-600 hover:text-red-900',
+                condition: (row) => row.STATUT !== 'ANNULEE' && row.STATUT !== 'RECUPEREE'
               }
             ]}
           />
@@ -268,10 +233,10 @@ const ColisManagement = () => {
                       onChange={(e) => setFormData({ ...formData, id_client: e.target.value })}
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     >
-                      <option value="">Select a client (optional)</option>
+                      <option value="">Select client (optional)</option>
                       {clients.map((client) => (
                         <option key={client.ID_CLIENT} value={client.ID_CLIENT}>
-                          {client.PRENOM} {client.NOM}
+                          {client.NOM} {client.PRENOM}
                         </option>
                       ))}
                     </select>
@@ -283,7 +248,7 @@ const ColisManagement = () => {
                       type="number"
                       required
                       min="1"
-                      step="0.1"
+                      step="0.01"
                       value={formData.poids}
                       onChange={(e) => setFormData({ ...formData, poids: e.target.value })}
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
@@ -293,12 +258,16 @@ const ColisManagement = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Type *</label>
                     <select
+                      required
                       value={formData.type}
                       onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     >
-                      <option value={COLIS_TYPES.STANDARD}>STANDARD</option>
-                      <option value={COLIS_TYPES.FRAGILE}>FRAGILE</option>
+                      {Object.entries(COLIS_TYPES).map(([key, value]) => (
+                        <option key={key} value={value}>
+                          {value}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -334,16 +303,17 @@ const ColisManagement = () => {
                     <label className="block text-sm font-medium text-gray-700">Entrepôt d'expédition</label>
                     <input
                       type="text"
-                      readOnly
                       value={userEntrepot ? `${userEntrepot.VILLE} - ${userEntrepot.ADRESSE}` : 'Non assigné'}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed"
+                      disabled
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
                     />
-                    {!userEntrepot && (
-                      <p className="mt-1 text-xs text-red-600">
-                        Vous devez être assigné à un entrepôt pour créer un colis
-                      </p>
-                    )}
                   </div>
+
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
+                      {error}
+                    </div>
+                  )}
 
                   <div className="flex justify-end space-x-3">
                     <button
@@ -365,78 +335,37 @@ const ColisManagement = () => {
             </div>
           </Dialog>
 
-          {/* Change Status Modal */}
+          {/* Cancel Confirmation Modal */}
           <Dialog open={isStatusModalOpen} onClose={() => setIsStatusModalOpen(false)} className="relative z-50">
             <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
             <div className="fixed inset-0 flex items-center justify-center p-4">
               <Dialog.Panel className="mx-auto max-w-md rounded bg-white p-6 w-full">
-                <Dialog.Title className="text-xl font-bold mb-4">Change Status</Dialog.Title>
+                <Dialog.Title className="text-xl font-bold mb-4">Cancel Colis</Dialog.Title>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">New Status</label>
-                    <select
-                      value={newStatus}
-                      onChange={(e) => setNewStatus(e.target.value)}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    >
-                      {/* Gestionnaire can only change status to ENREGISTRE or ANNULE */}
-                      <option value={COLIS_STATUS.ENREGISTRE}>ENREGISTRE</option>
-                      <option value={COLIS_STATUS.ANNULE}>ANNULE</option>
-                    </select>
-                  </div>
+                  <p className="text-gray-700">
+                    Are you sure you want to cancel this colis? This action cannot be undone.
+                  </p>
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
+                      {error}
+                    </div>
+                  )}
                   <div className="flex justify-end space-x-3">
                     <button
                       type="button"
                       onClick={() => setIsStatusModalOpen(false)}
                       className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                     >
-                      Cancel
+                      No
                     </button>
                     <button
-                      onClick={handleChangeStatus}
-                      className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                      onClick={handleCancelColis}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                     >
-                      Update
+                      Yes, Cancel
                     </button>
                   </div>
                 </div>
-              </Dialog.Panel>
-            </div>
-          </Dialog>
-
-          {/* Recover Modal */}
-          <Dialog open={isRecoverModalOpen} onClose={() => setIsRecoverModalOpen(false)} className="relative z-50">
-            <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-            <div className="fixed inset-0 flex items-center justify-center p-4">
-              <Dialog.Panel className="mx-auto max-w-md rounded bg-white p-6 w-full">
-                <Dialog.Title className="text-xl font-bold mb-4">Mark as Recovered</Dialog.Title>
-                <form onSubmit={handleRecover} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Receiver CIN *</label>
-                    <input
-                      type="text"
-                      required
-                      value={recoverCin}
-                      onChange={(e) => setRecoverCin(e.target.value)}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div className="flex justify-end space-x-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsRecoverModalOpen(false)}
-                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                    >
-                      Mark as Recovered
-                    </button>
-                  </div>
-                </form>
               </Dialog.Panel>
             </div>
           </Dialog>
@@ -446,7 +375,6 @@ const ColisManagement = () => {
   );
 };
 
-export default ColisManagement;
-
+export default ColisExpedies;
 
 

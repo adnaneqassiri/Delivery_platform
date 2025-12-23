@@ -103,6 +103,7 @@ const getMe = async (req, res, next) => {
       });
     }
     
+<<<<<<< HEAD
     // Get user's entrepot if not in session
     let id_entrepot = req.session.id_entrepot;
     if (!id_entrepot) {
@@ -119,6 +120,24 @@ const getMe = async (req, res, next) => {
         id_entrepot = null;
         req.session.id_entrepot = null;
       }
+=======
+    // Always get user's entrepot from database to ensure it's up to date
+    // (in case it was updated after login)
+    let id_entrepot = null;
+    try {
+      const userInfo = await executeQuery(
+        'SELECT id_entrepot FROM utilisateurs WHERE id_utilisateur = :id',
+        { id: req.session.userId }
+      );
+      id_entrepot = userInfo[0]?.ID_ENTREPOT || null;
+      // Update session with latest value
+      req.session.id_entrepot = id_entrepot;
+    } catch (err) {
+      // Column might not exist yet, set to null
+      console.log('id_entrepot column not found, setting to null');
+      id_entrepot = null;
+      req.session.id_entrepot = null;
+>>>>>>> e2abf37e3262a183a9bb15493d4768a4f62ebff5
     }
     
     res.json({

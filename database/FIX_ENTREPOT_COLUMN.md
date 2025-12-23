@@ -70,3 +70,8 @@ COMMIT;
 3. L'erreur devrait disparaître et vous pourrez créer des colis
 
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> e2abf37e3262a183a9bb15493d4768a4f62ebff5

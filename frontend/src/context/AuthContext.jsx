@@ -25,9 +25,15 @@ export const AuthProvider = ({ children }) => {
       const response = await api.get('/auth/me');
       if (response.data.success) {
         setUser(response.data.data);
+      } else {
+        setUser(null);
       }
     } catch (error) {
-      setUser(null);
+      // Only set user to null if it's a real auth error, not a network error
+      if (error.response?.status === 401) {
+        setUser(null);
+      }
+      // For other errors, keep current state to avoid unnecessary re-renders
     } finally {
       setLoading(false);
     }
@@ -69,6 +75,10 @@ export const AuthProvider = ({ children }) => {
   const isGestionnaire = () => user?.role === ROLES.GESTIONNAIRE;
   const isLivreur = () => user?.role === ROLES.LIVREUR;
 
+  const refreshUser = async () => {
+    await checkAuth();
+  };
+
   const value = {
     user,
     loading,
@@ -77,7 +87,8 @@ export const AuthProvider = ({ children }) => {
     isAdmin,
     isGestionnaire,
     isLivreur,
-    checkAuth
+    checkAuth,
+    refreshUser
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

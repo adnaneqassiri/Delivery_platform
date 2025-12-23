@@ -35,8 +35,17 @@ SELECT
   c.ville_destination,
   c.statut,
   l.id_livraison,
-  e1.ville || ' -> ' || e2.ville AS trajet,
-  el.ville || ' - ' || el.adresse AS localisation_entrepot
+  -- Calculate route: if livraison exists, use it; otherwise use entrepot_localisation and ville_destination
+  CASE 
+    WHEN l.id_livraison IS NOT NULL THEN
+      e1.ville || ' -> ' || e2.ville
+    WHEN c.id_entrepot_localisation IS NOT NULL AND c.ville_destination IS NOT NULL THEN
+      el.ville || ' -> ' || c.ville_destination
+    ELSE
+      NULL
+  END AS trajet,
+  el.ville || ' - ' || el.adresse AS localisation_entrepot,
+  e2.id_entrepot AS id_entrepot_destination_livraison -- Added for filtering colis reçus
 FROM colis c
 LEFT JOIN clients cl ON c.id_client = cl.id_client
 LEFT JOIN livraisons l ON c.id_livraison = l.id_livraison
@@ -59,8 +68,8 @@ CREATE OR REPLACE VIEW v_kpi_dashboard AS
 SELECT
   (SELECT COUNT(*) FROM colis) AS colis_count,
   (SELECT COUNT(*) FROM livraisons) AS livraisons_count,
-  (SELECT NVL(SUM(prix),0) FROM colis WHERE statut IN ('LIVRE','RECUPEREE')) AS chiffre_affaire,
-  (SELECT COUNT(*) FROM utilisateurs WHERE role = 'LIVREUR' AND actif = 1) AS livreurs_count,
+  (SELECT NVL(SUM(prix),0) FROM colis WHERE statut IN ('ENVOYEE','RECUPEREE')) AS chiffre_affaire,
+  (SELECT COUNT(*) FROM utilisateurs WHERE UPPER(TRIM(role)) = 'LIVREUR' AND actif = 1) AS livreurs_count,
   (SELECT COUNT(*) FROM entrepots) AS entrepots_count,
   (SELECT COUNT(*) FROM clients) AS clients_count
 FROM dual;

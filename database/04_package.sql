@@ -320,13 +320,44 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
   ) AS
     v_role VARCHAR2(20);
     v_old  VARCHAR2(20);
+    v_id_entrepot_user NUMBER;
+    v_id_entrepot_colis NUMBER;
   BEGIN
     v_role := f_role(p_id_user);
     IF v_role NOT IN ('GESTIONNAIRE','ADMIN') THEN
       RAISE_APPLICATION_ERROR(-20007, 'Seul gestionnaire/admin peut modifier statut colis');
     END IF;
 
-    SELECT statut INTO v_old FROM colis WHERE id_colis = p_id_colis;
+    -- Get colis info
+    SELECT statut, id_entrepot_localisation INTO v_old, v_id_entrepot_colis
+    FROM colis WHERE id_colis = p_id_colis;
+
+    -- For gestionnaire: check if they can modify this colis
+    IF v_role = 'GESTIONNAIRE' THEN
+      BEGIN
+        SELECT id_entrepot INTO v_id_entrepot_user
+        FROM utilisateurs
+        WHERE id_utilisateur = p_id_user;
+      EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+          RAISE_APPLICATION_ERROR(-20010, 'Gestionnaire must be assigned to an entrepot');
+      END;
+      
+      IF v_id_entrepot_user IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20010, 'Gestionnaire must be assigned to an entrepot');
+      END IF;
+      
+      -- Gestionnaire can only modify colis:
+      -- 1. Sent from their entrepot (not yet delivered)
+      -- 2. OR delivered to their entrepot (for marking as recovered)
+      IF NOT (
+        (v_id_entrepot_colis = v_id_entrepot_user AND v_old != 'LIVRE' AND v_old != 'RECUPEREE')
+        OR
+        (v_id_entrepot_colis = v_id_entrepot_user AND v_old = 'LIVRE' AND p_statut = 'RECUPEREE')
+      ) THEN
+        RAISE_APPLICATION_ERROR(-20011, 'Vous ne pouvez modifier que les colis de votre entrepot');
+      END IF;
+    END IF;
 
     UPDATE colis
     SET statut = p_statut
@@ -341,19 +372,42 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
     p_id_user      NUMBER
   ) AS
     v_role VARCHAR2(20);
+    v_id_entrepot NUMBER;
     v_count NUMBER := 0;
   BEGIN
     v_role := f_role(p_id_user);
     IF v_role NOT IN ('GESTIONNAIRE','ADMIN') THEN
       RAISE_APPLICATION_ERROR(-20008, 'Seul gestionnaire/admin peut marquer recuperee');
     END IF;
+    
+    -- Get user's entrepot (for gestionnaire)
+    IF v_role = 'GESTIONNAIRE' THEN
+      BEGIN
+        SELECT id_entrepot INTO v_id_entrepot
+        FROM utilisateurs
+        WHERE id_utilisateur = p_id_user;
+      EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+          RAISE_APPLICATION_ERROR(-20010, 'Gestionnaire must be assigned to an entrepot');
+      END;
+      
+      IF v_id_entrepot IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20010, 'Gestionnaire must be assigned to an entrepot');
+      END IF;
+    END IF;
 
     -- Update all colis with matching CIN (case-insensitive, trimmed) and LIVRE status
+    -- For gestionnaire: only colis delivered to their entrepot
+    -- For admin: all colis
     FOR r IN (
-      SELECT id_colis, statut
-      FROM colis
-      WHERE UPPER(TRIM(receiver_cin)) = UPPER(TRIM(p_receiver_cin))
-        AND statut = 'LIVRE'
+      SELECT c.id_colis, c.statut, c.id_entrepot_localisation
+      FROM colis c
+      WHERE UPPER(TRIM(c.receiver_cin)) = UPPER(TRIM(p_receiver_cin))
+        AND c.statut = 'LIVRE'
+        AND (
+          v_role = 'ADMIN' 
+          OR (v_role = 'GESTIONNAIRE' AND c.id_entrepot_localisation = v_id_entrepot)
+        )
     ) LOOP
       UPDATE colis
       SET statut = 'RECUPEREE'
@@ -367,7 +421,11 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
     
     -- Raise error if no colis found
     IF v_count = 0 THEN
-      RAISE_APPLICATION_ERROR(-20009, 'Aucun colis trouve avec CIN ' || p_receiver_cin || ' et statut LIVRE');
+      IF v_role = 'GESTIONNAIRE' THEN
+        RAISE_APPLICATION_ERROR(-20009, 'Aucun colis trouve avec CIN ' || p_receiver_cin || ' et statut LIVRE dans votre entrepot');
+      ELSE
+        RAISE_APPLICATION_ERROR(-20009, 'Aucun colis trouve avec CIN ' || p_receiver_cin || ' et statut LIVRE');
+      END IF;
     END IF;
   END;
 
