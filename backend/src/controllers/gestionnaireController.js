@@ -1,9 +1,49 @@
 const { callProcedure, executeQuery } = require('../utils/oracleHelper');
 
-// Get all colis with details
+// Get all colis with details (filtered by gestionnaire's entrepot)
 const getColis = async (req, res, next) => {
   try {
-    const colis = await executeQuery('SELECT * FROM v_colis_details ORDER BY id_colis DESC');
+    const id_user = req.session.userId;
+    
+    // Get user's entrepot
+    let id_entrepot = req.session.id_entrepot;
+    if (!id_entrepot) {
+      try {
+        const userInfo = await executeQuery(
+          'SELECT id_entrepot FROM utilisateurs WHERE id_utilisateur = :id',
+          { id: id_user }
+        );
+        id_entrepot = userInfo[0]?.ID_ENTREPOT || null;
+        req.session.id_entrepot = id_entrepot;
+      } catch (err) {
+        id_entrepot = null;
+      }
+    }
+    
+    if (!id_entrepot) {
+      return res.status(400).json({
+        success: false,
+        message: 'User must be assigned to an entrepot to view colis'
+      });
+    }
+    
+    // Get colis that are:
+    // 1. Sent from this entrepot (id_entrepot_localisation = user's entrepot) AND not yet delivered
+    // 2. OR delivered to this entrepot (id_entrepot_localisation = user's entrepot) AND status is LIVRE or RECUPEREE
+    const colis = await executeQuery(
+      `SELECT c.* 
+       FROM v_colis_details c
+       JOIN colis col ON c.id_colis = col.id_colis
+       WHERE (
+         -- Colis sent from this entrepot (not yet delivered)
+         (col.id_entrepot_localisation = :id_entrepot AND col.statut != 'LIVRE' AND col.statut != 'RECUPEREE')
+         OR
+         -- Colis delivered to this entrepot (can be marked as recovered)
+         (col.id_entrepot_localisation = :id_entrepot AND col.statut IN ('LIVRE', 'RECUPEREE'))
+       )
+       ORDER BY c.id_colis DESC`,
+      { id_entrepot: id_entrepot }
+    );
     
     res.json({
       success: true,
