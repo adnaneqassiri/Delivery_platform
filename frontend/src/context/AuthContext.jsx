@@ -69,6 +69,10 @@ export const AuthProvider = ({ children }) => {
   const isGestionnaire = () => user?.role === ROLES.GESTIONNAIRE;
   const isLivreur = () => user?.role === ROLES.LIVREUR;
 
+  const refreshUser = async () => {
+    await checkAuth();
+  };
+
   const value = {
     user,
     loading,
@@ -77,7 +81,8 @@ export const AuthProvider = ({ children }) => {
     isAdmin,
     isGestionnaire,
     isLivreur,
-    checkAuth
+    checkAuth,
+    refreshUser
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

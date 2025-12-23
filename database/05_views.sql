@@ -35,7 +35,15 @@ SELECT
   c.ville_destination,
   c.statut,
   l.id_livraison,
-  e1.ville || ' -> ' || e2.ville AS trajet,
+  -- Calculate route: if livraison exists, use it; otherwise use entrepot_localisation and ville_destination
+  CASE 
+    WHEN l.id_livraison IS NOT NULL THEN
+      e1.ville || ' -> ' || e2.ville
+    WHEN c.id_entrepot_localisation IS NOT NULL AND c.ville_destination IS NOT NULL THEN
+      el.ville || ' -> ' || c.ville_destination
+    ELSE
+      NULL
+  END AS trajet,
   el.ville || ' - ' || el.adresse AS localisation_entrepot
 FROM colis c
 LEFT JOIN clients cl ON c.id_client = cl.id_client

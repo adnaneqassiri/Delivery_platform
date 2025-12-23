@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { COLIS_STATUS, COLIS_TYPES, STATUS_COLORS } from '../../utils/constants';
 
 const ColisManagement = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [colis, setColis] = useState([]);
   const [clients, setClients] = useState([]);
   const [entrepots, setEntrepots] = useState([]);
@@ -36,6 +36,16 @@ const ColisManagement = () => {
     fetchEntrepots();
     fetchUserEntrepot();
   }, []);
+
+  // Re-fetch user entrepot when modal opens to ensure we have latest data
+  useEffect(() => {
+    if (isAddModalOpen) {
+      // Refresh user data from server to get latest entrepot assignment
+      refreshUser().then(() => {
+        fetchUserEntrepot();
+      });
+    }
+  }, [isAddModalOpen]);
 
   const fetchColis = async () => {
     try {
