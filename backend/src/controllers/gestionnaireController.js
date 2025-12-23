@@ -1,7 +1,147 @@
 const { callProcedure, executeQuery } = require('../utils/oracleHelper');
 
-// Get all colis with details (filtered by gestionnaire's entrepot)
-const getColis = async (req, res, next) => {
+// Get vehicules for gestionnaire's entrepot
+const getVehicules = async (req, res, next) => {
+  try {
+    const id_user = req.session.userId;
+    const id_entrepot = req.session.id_entrepot;
+    
+    if (!id_entrepot) {
+      // Get user's entrepot from database
+      try {
+        const userInfo = await executeQuery(
+          'SELECT id_entrepot FROM utilisateurs WHERE id_utilisateur = :id',
+          { id: id_user }
+        );
+        if (userInfo[0]?.ID_ENTREPOT) {
+          req.session.id_entrepot = userInfo[0].ID_ENTREPOT;
+          id_entrepot = userInfo[0].ID_ENTREPOT;
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: 'Gestionnaire must be assigned to an entrepot'
+          });
+        }
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: 'Gestionnaire must be assigned to an entrepot'
+        });
+      }
+    }
+    
+    const vehicules = await executeQuery(
+      `SELECT v.id_vehicule, v.immatriculation, v.type_vehicule, v.statut, 
+              v.id_entrepot, v.date_creation,
+              e.ville || ' - ' || e.adresse AS entrepot_nom
+       FROM vehicules v
+       LEFT JOIN entrepots e ON v.id_entrepot = e.id_entrepot
+       WHERE v.id_entrepot = :id_entrepot
+       ORDER BY v.immatriculation`,
+      { id_entrepot }
+    );
+    
+    res.json({
+      success: true,
+      data: vehicules
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Update vehicule status (only DISPONIBLE <-> MAINTENANCE, not EN_UTILISATION)
+const updateVehiculeStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { statut } = req.body;
+    const id_user = req.session.userId;
+    const id_entrepot = req.session.id_entrepot;
+    
+    if (!id_entrepot) {
+      // Get user's entrepot from database
+      try {
+        const userInfo = await executeQuery(
+          'SELECT id_entrepot FROM utilisateurs WHERE id_utilisateur = :id',
+          { id: id_user }
+        );
+        if (userInfo[0]?.ID_ENTREPOT) {
+          req.session.id_entrepot = userInfo[0].ID_ENTREPOT;
+          id_entrepot = userInfo[0].ID_ENTREPOT;
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: 'Gestionnaire must be assigned to an entrepot'
+          });
+        }
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: 'Gestionnaire must be assigned to an entrepot'
+        });
+      }
+    }
+    
+    if (!statut) {
+      return res.status(400).json({
+        success: false,
+        message: 'statut is required'
+      });
+    }
+    
+    // Validate statut
+    if (!['DISPONIBLE', 'MAINTENANCE'].includes(statut)) {
+      return res.status(400).json({
+        success: false,
+        message: 'statut must be DISPONIBLE or MAINTENANCE'
+      });
+    }
+    
+    // Check if vehicule exists and belongs to gestionnaire's entrepot
+    const vehicule = await executeQuery(
+      'SELECT id_vehicule, statut, id_entrepot FROM vehicules WHERE id_vehicule = :id',
+      { id: parseInt(id) }
+    );
+    
+    if (vehicule.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicule not found'
+      });
+    }
+    
+    if (vehicule[0].ID_ENTREPOT !== id_entrepot) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only modify vehicules from your entrepot'
+      });
+    }
+    
+    // Cannot change status if it's EN_UTILISATION
+    if (vehicule[0].STATUT === 'EN_UTILISATION') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot change status of a vehicule that is EN_UTILISATION'
+      });
+    }
+    
+    // Update status
+    await executeQuery(
+      'UPDATE vehicules SET statut = :statut WHERE id_vehicule = :id',
+      { statut, id: parseInt(id) }
+    );
+    
+    res.json({
+      success: true,
+      message: 'Vehicule status updated successfully'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get colis expédiés (sent from gestionnaire's entrepot)
+const getColisExpedies = async (req, res, next) => {
   try {
     const id_user = req.session.userId;
     
@@ -27,20 +167,67 @@ const getColis = async (req, res, next) => {
       });
     }
     
-    // Get colis that are:
-    // 1. Sent from this entrepot (id_entrepot_localisation = user's entrepot) AND not yet delivered
-    // 2. OR delivered to this entrepot (id_entrepot_localisation = user's entrepot) AND status is LIVRE or RECUPEREE
+    // Get colis expédiés: colis sent from this gestionnaire's entrepot
+    // These are colis where id_entrepot_localisation = gestionnaire's entrepot
+    // (colis that were created/registered at this entrepot and sent from here)
     const colis = await executeQuery(
       `SELECT c.* 
        FROM v_colis_details c
        JOIN colis col ON c.id_colis = col.id_colis
-       WHERE (
-         -- Colis sent from this entrepot (not yet delivered)
-         (col.id_entrepot_localisation = :id_entrepot AND col.statut != 'LIVRE' AND col.statut != 'RECUPEREE')
-         OR
-         -- Colis delivered to this entrepot (can be marked as recovered)
-         (col.id_entrepot_localisation = :id_entrepot AND col.statut IN ('LIVRE', 'RECUPEREE'))
-       )
+       WHERE col.id_entrepot_localisation = :id_entrepot
+         AND col.statut NOT IN ('RECUPEREE')
+       ORDER BY c.id_colis DESC`,
+      { id_entrepot: id_entrepot }
+    );
+    
+    res.json({
+      success: true,
+      data: colis
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get colis reçus (received at gestionnaire's entrepot, waiting to be picked up)
+const getColisRecus = async (req, res, next) => {
+  try {
+    const id_user = req.session.userId;
+    
+    // Get user's entrepot
+    let id_entrepot = req.session.id_entrepot;
+    if (!id_entrepot) {
+      try {
+        const userInfo = await executeQuery(
+          'SELECT id_entrepot FROM utilisateurs WHERE id_utilisateur = :id',
+          { id: id_user }
+        );
+        id_entrepot = userInfo[0]?.ID_ENTREPOT || null;
+        req.session.id_entrepot = id_entrepot;
+      } catch (err) {
+        id_entrepot = null;
+      }
+    }
+    
+    if (!id_entrepot) {
+      return res.status(400).json({
+        success: false,
+        message: 'User must be assigned to an entrepot to view colis'
+      });
+    }
+    
+    // Get colis reçus: colis that have arrived at this entrepot (destination entrepot)
+    // These are colis where the livraison destination is this entrepot
+    // and the colis is currently at this entrepot (id_entrepot_localisation = destination)
+    // Status should be RECEPTIONNEE (colis received at destination entrepot)
+    const colis = await executeQuery(
+      `SELECT c.* 
+       FROM v_colis_details c
+       JOIN colis col ON c.id_colis = col.id_colis
+       JOIN livraisons l ON col.id_livraison = l.id_livraison
+       WHERE l.id_entrepot_destination = :id_entrepot
+         AND col.id_entrepot_localisation = :id_entrepot
+         AND col.statut = 'RECEPTIONNEE'
        ORDER BY c.id_colis DESC`,
       { id_entrepot: id_entrepot }
     );
@@ -149,17 +336,18 @@ const addColis = async (req, res, next) => {
   }
 };
 
-// Modify colis status
-const modifyColisStatus = async (req, res, next) => {
+// Modify colis status for expédiés (only allow ANNULEE)
+const modifyColisStatusExpedies = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { statut } = req.body;
     const id_user = req.session.userId;
     
-    if (!statut) {
+    // Only allow ANNULEE status for expédiés
+    if (statut !== 'ANNULEE') {
       return res.status(400).json({
         success: false,
-        message: 'statut is required'
+        message: 'You can only cancel (ANNULEE) colis expédiés'
       });
     }
     
@@ -175,7 +363,7 @@ const modifyColisStatus = async (req, res, next) => {
     
     res.json({
       success: true,
-      message: 'Colis status updated successfully'
+      message: 'Colis cancelled successfully'
     });
   } catch (err) {
     next(err);
@@ -216,11 +404,14 @@ const markColisRecuperee = async (req, res, next) => {
   }
 };
 
-// Get all clients
+// Get all clients (only clients created by this gestionnaire)
 const getClients = async (req, res, next) => {
   try {
+    const id_gestionnaire = req.session.userId;
+    
     const clients = await executeQuery(
-      'SELECT * FROM clients ORDER BY id_client'
+      'SELECT * FROM clients WHERE id_gestionnaire_ajout = :id_gestionnaire ORDER BY id_client',
+      { id_gestionnaire }
     );
     
     res.json({
@@ -311,14 +502,17 @@ const getColisHistory = async (req, res, next) => {
 };
 
 module.exports = {
-  getColis,
+  getColisExpedies,
+  getColisRecus,
   addColis,
-  modifyColisStatus,
-  markColisRecuperee,
+  modifyColisStatusExpedies,
+  markColisRecupereeRecus,
   getClients,
   createClient,
   getEntrepots,
-  getColisHistory
+  getColisHistory,
+  getVehicules,
+  updateVehiculeStatus
 };
 
 

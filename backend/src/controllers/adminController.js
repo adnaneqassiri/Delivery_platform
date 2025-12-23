@@ -20,31 +20,20 @@ const getKPIs = async (req, res, next) => {
       });
     }
     
-    // Oracle returns column names in UPPERCASE, normalize to lowercase
-    const kpiData = kpis[0];
-    const normalizedKpis = {
-      colis_count: kpiData.COLIS_COUNT || kpiData.colis_count || 0,
-      livraisons_count: kpiData.LIVRAISONS_COUNT || kpiData.livraisons_count || 0,
-      chiffre_affaire: kpiData.CHIFFRE_AFFAIRE || kpiData.chiffre_affaire || 0,
-      livreurs_count: kpiData.LIVREURS_COUNT || kpiData.livreurs_count || 0,
-      entrepots_count: kpiData.ENTREPOTS_COUNT || kpiData.entrepots_count || 0,
-      clients_count: kpiData.CLIENTS_COUNT || kpiData.clients_count || 0
-    };
-    
     // Get additional counts for admins and gestionnaires
     const adminCount = await executeQuery(
-      "SELECT COUNT(*) as count FROM utilisateurs WHERE UPPER(TRIM(role)) = 'ADMIN' AND actif = 1"
+      "SELECT COUNT(*) as count FROM utilisateurs WHERE role = 'ADMIN' AND actif = 1"
     );
     const gestionnaireCount = await executeQuery(
-      "SELECT COUNT(*) as count FROM utilisateurs WHERE UPPER(TRIM(role)) = 'GESTIONNAIRE' AND actif = 1"
+      "SELECT COUNT(*) as count FROM utilisateurs WHERE role = 'GESTIONNAIRE' AND actif = 1"
     );
     
     res.json({
       success: true,
       data: {
-        ...normalizedKpis,
-        admins_count: adminCount[0]?.COUNT || adminCount[0]?.count || 0,
-        gestionnaires_count: gestionnaireCount[0]?.COUNT || gestionnaireCount[0]?.count || 0
+        ...kpis[0],
+        admins_count: adminCount[0]?.COUNT || 0,
+        gestionnaires_count: gestionnaireCount[0]?.COUNT || 0
       }
     });
   } catch (err) {
@@ -85,19 +74,12 @@ const createUser = async (req, res, next) => {
       });
     }
     
-    // If creating a livreur or gestionnaire, entrepot can be assigned
-    if ((role === 'LIVREUR' || role === 'GESTIONNAIRE') && id_entrepot) {
-      // Validate entrepot exists
-      const entrepotCheck = await executeQuery(
-        'SELECT id_entrepot FROM entrepots WHERE id_entrepot = :id',
-        { id: parseInt(id_entrepot) }
-      );
-      if (entrepotCheck.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid entrepot id'
-        });
-      }
+    // If creating a livreur, entrepot is required
+    if (role === 'LIVREUR' && !id_entrepot) {
+      return res.status(400).json({
+        success: false,
+        message: 'id_entrepot is required for livreur'
+      });
     }
     
     const result = await callProcedure(
@@ -123,24 +105,12 @@ const createUser = async (req, res, next) => {
       });
     }
     
-    // If livreur or gestionnaire, assign entrepot if provided
-    if ((role === 'LIVREUR' || role === 'GESTIONNAIRE') && id_entrepot) {
+    // If livreur, assign entrepot
+    if (role === 'LIVREUR' && id_entrepot) {
       await executeQuery(
         'UPDATE utilisateurs SET id_entrepot = :id_entrepot WHERE id_utilisateur = :id',
         { id_entrepot: parseInt(id_entrepot), id: result.p_id }
       );
-      
-      // If it's a gestionnaire, update entrepots.id_user if it's NULL
-      // (set this gestionnaire as the responsable manager for the entrepot)
-      if (role === 'GESTIONNAIRE') {
-        await executeQuery(
-          `UPDATE entrepots 
-           SET id_user = :id_user 
-           WHERE id_entrepot = :id_entrepot 
-             AND id_user IS NULL`,
-          { id_user: result.p_id, id_entrepot: parseInt(id_entrepot) }
-        );
-      }
     }
     
     res.json({
@@ -191,26 +161,6 @@ const updateUser = async (req, res, next) => {
     
     const query = `UPDATE utilisateurs SET ${updates.join(', ')} WHERE id_utilisateur = :id`;
     await executeQuery(query, binds);
-    
-    // If updating id_entrepot for a gestionnaire, update entrepots.id_user if it's NULL
-    if (id_entrepot !== undefined && id_entrepot) {
-      // Get the user's role
-      const userInfo = await executeQuery(
-        'SELECT role FROM utilisateurs WHERE id_utilisateur = :id',
-        { id: parseInt(id) }
-      );
-      
-      if (userInfo.length > 0 && userInfo[0].ROLE === 'GESTIONNAIRE') {
-        // Update entrepots.id_user if it's NULL (set this gestionnaire as responsable)
-        await executeQuery(
-          `UPDATE entrepots 
-           SET id_user = :id_user 
-           WHERE id_entrepot = :id_entrepot 
-             AND id_user IS NULL`,
-          { id_user: parseInt(id), id_entrepot: parseInt(id_entrepot) }
-        );
-      }
-    }
     
     res.json({
       success: true,
@@ -297,20 +247,6 @@ const createClient = async (req, res, next) => {
   try {
     const { prenom, nom, cin, telephone, email, adresse } = req.body;
     const id_gestionnaire = req.session.userId;
-    const userRole = req.session.role;
-    
-    console.log('Create client - Session info:', {
-      userId: id_gestionnaire,
-      role: userRole,
-      sessionId: req.sessionID
-    });
-    
-    if (!id_gestionnaire) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
     
     if (!prenom || !nom) {
       return res.status(400).json({
@@ -351,7 +287,6 @@ const createClient = async (req, res, next) => {
       message: 'Client created successfully'
     });
   } catch (err) {
-    console.error('Create client error:', err);
     next(err);
   }
 };

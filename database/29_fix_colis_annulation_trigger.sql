@@ -28,3 +28,4 @@ PROMPT
 PROMPT The trigger now uses BEFORE UPDATE to set id_livraison = NULL directly,
 PROMPT avoiding the mutating table error.
 
+

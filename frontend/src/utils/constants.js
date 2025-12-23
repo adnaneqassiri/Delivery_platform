@@ -5,11 +5,12 @@ export const ROLES = {
 };
 
 export const COLIS_STATUS = {
-  ENREGISTRE: 'ENREGISTRE',
+  ENREGISTREE: 'ENREGISTREE',
   EN_COURS: 'EN_COURS',
-  LIVRE: 'LIVRE',
-  RECUPEREE: 'RECUPEREE',
-  ANNULE: 'ANNULE'
+  RECEPTIONNEE: 'RECEPTIONNEE',
+  ENVOYEE: 'ENVOYEE',
+  ANNULEE: 'ANNULEE',
+  RECUPEREE: 'RECUPEREE'
 };
 
 export const LIVRAISON_STATUS = {
@@ -30,14 +31,14 @@ export const VEHICULE_TYPES = {
 };
 
 export const STATUS_COLORS = {
-  ENREGISTRE: 'bg-blue-100 text-blue-800',
+  ENREGISTREE: 'bg-blue-100 text-blue-800',
   EN_COURS: 'bg-yellow-100 text-yellow-800',
-  LIVRE: 'bg-green-100 text-green-800',
+  RECEPTIONNEE: 'bg-orange-100 text-orange-800',
+  ENVOYEE: 'bg-green-100 text-green-800',
+  ANNULEE: 'bg-red-100 text-red-800',
   RECUPEREE: 'bg-purple-100 text-purple-800',
-  ANNULE: 'bg-red-100 text-red-800',
   CREEE: 'bg-gray-100 text-gray-800',
   LIVREE: 'bg-green-100 text-green-800',
-  ANNULEE: 'bg-red-100 text-red-800',
   DISPONIBLE: 'bg-green-100 text-green-800',
   EN_UTILISATION: 'bg-yellow-100 text-yellow-800',
   MAINTENANCE: 'bg-red-100 text-red-800'

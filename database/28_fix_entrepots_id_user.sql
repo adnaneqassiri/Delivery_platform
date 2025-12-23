@@ -70,3 +70,4 @@ PROMPT
 PROMPT All entrepots with gestionnaires should now have id_user set.
 PROMPT The first gestionnaire assigned to each entrepot has been set as the manager.
 
+

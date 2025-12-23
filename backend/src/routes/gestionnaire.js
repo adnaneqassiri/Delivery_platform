@@ -2,25 +2,33 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth, requireRole } = require('../middleware/auth');
 const {
-  getColis,
+  getColisExpedies,
+  getColisRecus,
   addColis,
-  modifyColisStatus,
-  markColisRecuperee,
+  modifyColisStatusExpedies,
+  markColisRecupereeRecus,
   getClients,
   createClient,
   getEntrepots,
-  getColisHistory
+  getColisHistory,
+  getVehicules,
+  updateVehiculeStatus
 } = require('../controllers/gestionnaireController');
 
 // All gestionnaire routes require authentication and GESTIONNAIRE role
 router.use(requireAuth);
 router.use(requireRole('GESTIONNAIRE', 'ADMIN'));
 
-// Colis
-router.get('/colis', getColis);
-router.post('/colis', addColis);
-router.put('/colis/:id/statut', modifyColisStatus);
-router.post('/colis/recuperer', markColisRecuperee);
+// Colis Expédiés
+router.get('/colis/expedies', getColisExpedies);
+router.post('/colis/expedies', addColis); // Add new colis
+router.put('/colis/expedies/:id/statut', modifyColisStatusExpedies); // Only ANNULEE
+
+// Colis Reçus
+router.get('/colis/recus', getColisRecus);
+router.post('/colis/recus/recuperer', markColisRecupereeRecus); // Mark as RECUPEREE
+
+// History
 router.get('/colis/:id/history', getColisHistory);
 
 // Clients
@@ -29,6 +37,10 @@ router.post('/clients', createClient);
 
 // Entrepots (for dropdowns)
 router.get('/entrepots', getEntrepots);
+
+// Vehicules
+router.get('/vehicules', getVehicules);
+router.put('/vehicules/:id/statut', updateVehiculeStatus);
 
 module.exports = router;
 

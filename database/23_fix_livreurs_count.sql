@@ -20,3 +20,4 @@ PROMPT KPI view updated to correctly count active livreurs!
 PROMPT 
 PROMPT The view now uses UPPER(TRIM(role)) to handle any whitespace or case issues.
 
+

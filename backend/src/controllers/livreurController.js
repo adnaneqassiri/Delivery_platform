@@ -152,13 +152,37 @@ const livrerLivraison = async (req, res, next) => {
   }
 };
 
-// Get available vehicles
+// Get available vehicles (only DISPONIBLE from livreur's entrepot)
 const getVehicules = async (req, res, next) => {
   try {
+    const id_livreur = req.session.userId;
+    
+    // Get livreur's entrepot
+    const userInfo = await executeQuery(
+      'SELECT id_entrepot FROM utilisateurs WHERE id_utilisateur = :id',
+      { id: id_livreur }
+    );
+    
+    if (!userInfo || userInfo.length === 0 || !userInfo[0].ID_ENTREPOT) {
+      return res.status(400).json({
+        success: false,
+        message: 'Livreur must be assigned to an entrepot'
+      });
+    }
+    
+    const id_entrepot = userInfo[0].ID_ENTREPOT;
+    
+    // Get only DISPONIBLE vehicules from livreur's entrepot
     const vehicules = await executeQuery(
-      `SELECT * FROM v_vehicules_entrepots 
-       WHERE statut_vehicule = 'DISPONIBLE'
-       ORDER BY immatriculation`
+      `SELECT v.id_vehicule, v.immatriculation, v.type_vehicule, v.statut,
+              v.id_entrepot, v.date_creation,
+              e.ville || ' - ' || e.adresse AS entrepot_nom
+       FROM vehicules v
+       LEFT JOIN entrepots e ON v.id_entrepot = e.id_entrepot
+       WHERE v.id_entrepot = :id_entrepot
+         AND v.statut = 'DISPONIBLE'
+       ORDER BY v.immatriculation`,
+      { id_entrepot }
     );
     
     res.json({

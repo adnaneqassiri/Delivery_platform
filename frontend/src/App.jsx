@@ -11,11 +11,14 @@ import AdminDashboard from './components/admin/Dashboard';
 import UsersManagement from './components/admin/UsersManagement';
 import ClientsManagement from './components/admin/ClientsManagement';
 import EntrepotsManagement from './components/admin/EntrepotsManagement';
+import AdminVehiculesManagement from './components/admin/VehiculesManagement';
 
 // Gestionnaire
 import GestionnaireDashboard from './components/gestionnaire/Dashboard';
-import ColisManagement from './components/gestionnaire/ColisManagement';
+import ColisExpedies from './components/gestionnaire/ColisExpedies';
+import ColisRecus from './components/gestionnaire/ColisRecus';
 import GestionnaireClients from './components/gestionnaire/ClientsManagement';
+import GestionnaireVehiculesManagement from './components/gestionnaire/VehiculesManagement';
 
 // Livreur
 import LivreurDashboard from './components/livreur/Dashboard';
@@ -106,6 +109,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/vehicules"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                <AdminVehiculesManagement />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Gestionnaire Routes */}
           <Route
@@ -117,10 +128,18 @@ function App() {
             }
           />
           <Route
-            path="/gestionnaire/colis"
+            path="/gestionnaire/colis/expedies"
             element={
               <ProtectedRoute allowedRoles={[ROLES.GESTIONNAIRE, ROLES.ADMIN]}>
-                <ColisManagement />
+                <ColisExpedies />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/gestionnaire/colis/recus"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.GESTIONNAIRE, ROLES.ADMIN]}>
+                <ColisRecus />
               </ProtectedRoute>
             }
           />
@@ -129,6 +148,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[ROLES.GESTIONNAIRE, ROLES.ADMIN]}>
                 <GestionnaireClients />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/gestionnaire/vehicules"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.GESTIONNAIRE, ROLES.ADMIN]}>
+                <GestionnaireVehiculesManagement />
               </ProtectedRoute>
             }
           />

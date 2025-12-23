@@ -37,3 +37,4 @@ COMMIT;
 PROMPT View v_colis_details updated to show route for unassigned colis!
 
 
+

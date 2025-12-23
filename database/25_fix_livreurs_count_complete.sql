@@ -39,3 +39,4 @@ PROMPT
 PROMPT Next step: Run 12_fix_package_syntax.sql to update the package
 PROMPT procedure p_creer_utilisateur to normalize roles on creation.
 
+

@@ -218,7 +218,7 @@ END;
 CREATE OR REPLACE TRIGGER trg_colis_annulation_unassign
 BEFORE UPDATE OF statut ON colis
 FOR EACH ROW
-WHEN (NEW.statut = 'ANNULE' AND OLD.statut <> 'ANNULE')
+WHEN (NEW.statut = 'ANNULEE' AND OLD.statut <> 'ANNULEE')
 BEGIN
   -- Unassign from livraison by setting id_livraison to NULL
   :NEW.id_livraison := NULL;
@@ -255,7 +255,7 @@ BEGIN
   UPDATE colis
   SET statut = 'EN_COURS'
   WHERE id_livraison = :NEW.id_livraison
-    AND statut IN ('ENREGISTRE');
+    AND statut IN ('ENREGISTREE');
 
   -- Livraison history
   INSERT INTO historique_statut_livraisons(id_livraison, statut_avant, statut_apres, id_utilisateur)
@@ -294,9 +294,9 @@ BEGIN
     WHERE id_vehicule = :NEW.id_vehicule;
   END IF;
 
-  -- Colis statuses (delivered)
+  -- Colis statuses (delivered - mark as RECEPTIONNEE at destination)
   UPDATE colis
-  SET statut = 'LIVRE',
+  SET statut = 'RECEPTIONNEE',
       id_entrepot_localisation = :NEW.id_entrepot_destination
   WHERE id_livraison = :NEW.id_livraison
     AND statut = 'EN_COURS';
@@ -308,7 +308,7 @@ BEGIN
   -- Colis history
   FOR r IN (SELECT id_colis, statut FROM colis WHERE id_livraison = :NEW.id_livraison) LOOP
     INSERT INTO historique_statut_colis(id_colis, statut_avant, statut_apres, id_utilisateur)
-    VALUES (r.id_colis, r.statut, 'LIVRE', v_user);
+    VALUES (r.id_colis, r.statut, 'RECEPTIONNEE', v_user);
   END LOOP;
 
   -- ensure date_livraison
