@@ -8,27 +8,28 @@ const Login = () => {
   const [mot_de_passe, setMotDePasse] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, user } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
+    // Only redirect if user is authenticated and not loading
+    if (!authLoading && user) {
       // Redirect based on role
       switch (user.role) {
         case ROLES.ADMIN:
-          navigate('/admin');
+          navigate('/admin', { replace: true });
           break;
         case ROLES.GESTIONNAIRE:
-          navigate('/gestionnaire');
+          navigate('/gestionnaire', { replace: true });
           break;
         case ROLES.LIVREUR:
-          navigate('/livreur');
+          navigate('/livreur', { replace: true });
           break;
         default:
           break;
       }
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,6 +63,15 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

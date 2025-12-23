@@ -25,9 +25,15 @@ export const AuthProvider = ({ children }) => {
       const response = await api.get('/auth/me');
       if (response.data.success) {
         setUser(response.data.data);
+      } else {
+        setUser(null);
       }
     } catch (error) {
-      setUser(null);
+      // Only set user to null if it's a real auth error, not a network error
+      if (error.response?.status === 401) {
+        setUser(null);
+      }
+      // For other errors, keep current state to avoid unnecessary re-renders
     } finally {
       setLoading(false);
     }

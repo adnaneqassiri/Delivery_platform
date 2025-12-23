@@ -103,6 +103,7 @@ DECLARE
   v_base NUMBER := 20;
   v_dest_entrepot NUMBER;
   v_livraison NUMBER;
+  PRAGMA AUTONOMOUS_TRANSACTION;
 BEGIN
   -- Price
   IF :NEW.type_colis = 'FRAGILE' THEN
@@ -126,6 +127,7 @@ BEGIN
     END;
 
     IF v_dest_entrepot IS NOT NULL THEN
+      -- Try to find existing livraison
       BEGIN
         SELECT id_livraison
         INTO v_livraison
@@ -138,7 +140,33 @@ BEGIN
         :NEW.id_livraison := v_livraison;
       EXCEPTION
         WHEN NO_DATA_FOUND THEN
-          NULL; -- keep id_livraison NULL if no route found
+          -- No livraison exists, create one automatically
+          BEGIN
+            INSERT INTO livraisons(id_entrepot_source, id_entrepot_destination, statut, date_creation)
+            VALUES (:NEW.id_entrepot_localisation, v_dest_entrepot, 'CREEE', SYSTIMESTAMP)
+            RETURNING id_livraison INTO v_livraison;
+            
+            :NEW.id_livraison := v_livraison;
+            COMMIT;
+          EXCEPTION
+            WHEN OTHERS THEN
+              -- If creation fails (e.g., duplicate), try to get existing one
+              BEGIN
+                SELECT id_livraison
+                INTO v_livraison
+                FROM livraisons
+                WHERE id_entrepot_source = :NEW.id_entrepot_localisation
+                  AND id_entrepot_destination = v_dest_entrepot
+                  AND statut = 'CREEE'
+                FETCH FIRST 1 ROWS ONLY;
+                
+                :NEW.id_livraison := v_livraison;
+              EXCEPTION
+                WHEN NO_DATA_FOUND THEN
+                  -- Keep id_livraison NULL if still not found
+                  NULL;
+              END;
+          END;
       END;
     END IF;
 
@@ -252,8 +280,15 @@ BEGIN
   :NEW.date_livraison := SYSDATE;
 
   -- Create a new livraison row for same route (keeps availability)
-  INSERT INTO livraisons(id_entrepot_source, id_entrepot_destination, statut, date_creation)
-  VALUES (:NEW.id_entrepot_source, :NEW.id_entrepot_destination, 'CREEE', SYSTIMESTAMP);
+  -- This is done via a procedure call to avoid mutating table error
+  -- The procedure p_create_new_livraison_if_needed will be created separately
+  BEGIN
+    p_create_new_livraison_if_needed(:NEW.id_entrepot_source, :NEW.id_entrepot_destination);
+  EXCEPTION
+    WHEN OTHERS THEN
+      -- If procedure fails, continue without creating new livraison
+      NULL;
+  END;
 
 END;
 /
