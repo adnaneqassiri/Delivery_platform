@@ -404,6 +404,155 @@ const getGestionnaires = async (req, res, next) => {
   }
 };
 
+// Get all vehicules (optionally filtered by entrepot)
+const getVehicules = async (req, res, next) => {
+  try {
+    const { id_entrepot } = req.query;
+    
+    let query = `
+      SELECT v.id_vehicule, v.immatriculation, v.type_vehicule, v.statut, 
+             v.id_entrepot, v.date_creation,
+             e.ville || ' - ' || e.adresse AS entrepot_nom
+      FROM vehicules v
+      LEFT JOIN entrepots e ON v.id_entrepot = e.id_entrepot
+    `;
+    
+    const binds = {};
+    if (id_entrepot) {
+      query += ' WHERE v.id_entrepot = :id_entrepot';
+      binds.id_entrepot = parseInt(id_entrepot);
+    }
+    
+    query += ' ORDER BY v.immatriculation';
+    
+    const vehicules = await executeQuery(query, binds);
+    
+    res.json({
+      success: true,
+      data: vehicules
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Create vehicule
+const createVehicule = async (req, res, next) => {
+  try {
+    const { immatriculation, type_vehicule, id_entrepot } = req.body;
+    const id_user = req.session.userId;
+    
+    if (!immatriculation || !type_vehicule) {
+      return res.status(400).json({
+        success: false,
+        message: 'immatriculation and type_vehicule are required'
+      });
+    }
+    
+    if (!id_entrepot) {
+      return res.status(400).json({
+        success: false,
+        message: 'id_entrepot is required'
+      });
+    }
+    
+    // Validate entrepot exists
+    const entrepotCheck = await executeQuery(
+      'SELECT id_entrepot FROM entrepots WHERE id_entrepot = :id',
+      { id: parseInt(id_entrepot) }
+    );
+    
+    if (entrepotCheck.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid entrepot id'
+      });
+    }
+    
+    const result = await callProcedure(
+      'pkg_logitrack.p_creer_vehicule',
+      {
+        p_immatriculation: immatriculation,
+        p_type: type_vehicule,
+        p_id_entrepot: parseInt(id_entrepot)
+      },
+      {
+        p_id: 'NUMBER'
+      }
+    );
+    
+    res.json({
+      success: true,
+      data: { id: result.p_id },
+      message: 'Vehicule created successfully'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Update vehicule (change entrepot)
+const updateVehicule = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { id_entrepot } = req.body;
+    const id_user = req.session.userId;
+    
+    if (id_entrepot === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'id_entrepot is required'
+      });
+    }
+    
+    // Validate entrepot exists
+    if (id_entrepot) {
+      const entrepotCheck = await executeQuery(
+        'SELECT id_entrepot FROM entrepots WHERE id_entrepot = :id',
+        { id: parseInt(id_entrepot) }
+      );
+      
+      if (entrepotCheck.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid entrepot id'
+        });
+      }
+    }
+    
+    // Check if vehicule exists
+    const vehiculeCheck = await executeQuery(
+      'SELECT id_vehicule FROM vehicules WHERE id_vehicule = :id',
+      { id: parseInt(id) }
+    );
+    
+    if (vehiculeCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicule not found'
+      });
+    }
+    
+    // Use procedure to change entrepot
+    await callProcedure(
+      'pkg_logitrack.p_changer_entrepot_vehicule',
+      {
+        p_id_vehicule: parseInt(id),
+        p_id_entrepot: id_entrepot ? parseInt(id_entrepot) : null,
+        p_id_user: id_user
+      },
+      {}
+    );
+    
+    res.json({
+      success: true,
+      message: 'Vehicule updated successfully'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getKPIs,
   getUsers,
@@ -414,7 +563,10 @@ module.exports = {
   getClients,
   createClient,
   updateClient,
-  getGestionnaires
+  getGestionnaires,
+  getVehicules,
+  createVehicule,
+  updateVehicule
 };
 
 

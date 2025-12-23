@@ -92,3 +92,4 @@ COMMIT;
 
 PROMPT Auto-create livraison triggers fixed!
 
+

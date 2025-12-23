@@ -93,3 +93,4 @@ COMMIT;
 
 PROMPT Trigger fixed successfully using package variable approach!
 
+

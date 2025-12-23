@@ -371,7 +371,8 @@ const modifyColisStatusExpedies = async (req, res, next) => {
 };
 
 // Mark colis as recovered
-const markColisRecuperee = async (req, res, next) => {
+// Mark colis as recovered (for colis reçus)
+const markColisRecupereeRecus = async (req, res, next) => {
   try {
     const { receiver_cin } = req.body;
     const id_user = req.session.userId;

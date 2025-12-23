@@ -8,11 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { COLIS_STATUS, COLIS_TYPES, STATUS_COLORS } from '../../utils/constants';
 
 const ColisManagement = () => {
-<<<<<<< HEAD
-  const { user } = useAuth();
-=======
   const { user, refreshUser } = useAuth();
->>>>>>> e2abf37e3262a183a9bb15493d4768a4f62ebff5
   const [colis, setColis] = useState([]);
   const [clients, setClients] = useState([]);
   const [entrepots, setEntrepots] = useState([]);
