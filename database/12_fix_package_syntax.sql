@@ -24,9 +24,13 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
     p_cin  VARCHAR2,
     p_id   OUT NUMBER
   ) AS
+    v_role_normalized VARCHAR2(20);
   BEGIN
-    INSERT INTO utilisateurs(nom_utilisateur, mot_de_passe, role, cin)
-    VALUES (p_nom, p_pwd, p_role, p_cin)
+    -- Normalize role to uppercase and trim whitespace
+    v_role_normalized := UPPER(TRIM(p_role));
+    
+    INSERT INTO utilisateurs(nom_utilisateur, mot_de_passe, role, cin, actif)
+    VALUES (p_nom, p_pwd, v_role_normalized, p_cin, 1)
     RETURNING id_utilisateur INTO p_id;
   END;
 
