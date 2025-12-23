@@ -8,6 +8,7 @@ import { ROLES } from '../../utils/constants';
 
 const UsersManagement = () => {
   const [users, setUsers] = useState([]);
+  const [entrepots, setEntrepots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -16,6 +17,7 @@ const UsersManagement = () => {
     mot_de_passe: '',
     role: 'GESTIONNAIRE',
     cin: '',
+    id_entrepot: '',
     actif: 1
   });
   const [error, setError] = useState('');
@@ -23,6 +25,7 @@ const UsersManagement = () => {
 
   useEffect(() => {
     fetchUsers();
+    fetchEntrepots();
   }, []);
 
   const fetchUsers = async () => {
@@ -38,6 +41,17 @@ const UsersManagement = () => {
     }
   };
 
+  const fetchEntrepots = async () => {
+    try {
+      const response = await api.get('/admin/entrepots');
+      if (response.data.success) {
+        setEntrepots(response.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load entrepots');
+    }
+  };
+
   const handleOpenModal = (user = null) => {
     if (user) {
       setEditingUser(user);
@@ -46,6 +60,7 @@ const UsersManagement = () => {
         mot_de_passe: '',
         role: user.ROLE,
         cin: user.CIN || '',
+        id_entrepot: user.ID_ENTREPOT || '',
         actif: user.ACTIF
       });
     } else {
@@ -55,6 +70,7 @@ const UsersManagement = () => {
         mot_de_passe: '',
         role: 'GESTIONNAIRE',
         cin: '',
+        id_entrepot: '',
         actif: 1
       });
     }
@@ -71,6 +87,7 @@ const UsersManagement = () => {
       mot_de_passe: '',
       role: 'GESTIONNAIRE',
       cin: '',
+      id_entrepot: '',
       actif: 1
     });
   };
@@ -86,12 +103,16 @@ const UsersManagement = () => {
         await api.put(`/admin/users/${editingUser.ID_UTILISATEUR}`, {
           role: formData.role,
           cin: formData.cin,
+          id_entrepot: formData.id_entrepot || null,
           actif: formData.actif
         });
         setSuccess('User updated successfully');
       } else {
         // Create user
-        await api.post('/admin/users', formData);
+        await api.post('/admin/users', {
+          ...formData,
+          id_entrepot: formData.id_entrepot || null
+        });
         setSuccess('User created successfully');
       }
       handleCloseModal();
@@ -117,6 +138,11 @@ const UsersManagement = () => {
     { key: 'NOM_UTILISATEUR', label: 'Username' },
     { key: 'ROLE', label: 'Role' },
     { key: 'CIN', label: 'CIN' },
+    { 
+      key: 'ENTREPOT_NOM', 
+      label: 'Entrepôt',
+      render: (value) => value || 'Non assigné'
+    },
     {
       key: 'ACTIF',
       label: 'Status',
@@ -237,6 +263,32 @@ const UsersManagement = () => {
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     />
                   </div>
+
+                  {(formData.role === 'GESTIONNAIRE' || formData.role === 'LIVREUR') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Entrepôt {formData.role === 'LIVREUR' ? '(requis)' : '(optionnel)'}
+                      </label>
+                      <select
+                        required={formData.role === 'LIVREUR'}
+                        value={formData.id_entrepot}
+                        onChange={(e) => setFormData({ ...formData, id_entrepot: e.target.value })}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="">Sélectionner un entrepôt</option>
+                        {entrepots.map((entrepot) => (
+                          <option key={entrepot.ID_ENTREPOT} value={entrepot.ID_ENTREPOT}>
+                            {entrepot.VILLE} - {entrepot.ADRESSE}
+                          </option>
+                        ))}
+                      </select>
+                      {formData.role === 'GESTIONNAIRE' && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          L'entrepôt est nécessaire pour créer des colis
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {editingUser && (
                     <div>

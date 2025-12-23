@@ -129,8 +129,23 @@ const executeProcedure = async (procedureName, inParams = {}, outParams = {}) =>
     console.error('Error executing procedure:', procedureName);
     console.error('Error details:', err.message);
     console.error('Error code:', err.errorNum || err.code);
+    console.error('Error number:', err.errorNum);
     console.error('Parameters:', { inParams, outParams });
-    throw err;
+    
+    // Oracle errors have errorNum property for RAISE_APPLICATION_ERROR
+    // and code property for other Oracle errors
+    const oracleError = {
+      message: err.message,
+      errorNum: err.errorNum,
+      code: err.code
+    };
+    
+    // Preserve Oracle error structure
+    if (err.errorNum) {
+      oracleError.errorNum = err.errorNum;
+    }
+    
+    throw oracleError;
   } finally {
     if (connection) {
       await connection.close();

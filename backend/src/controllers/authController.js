@@ -33,17 +33,40 @@ const login = async (req, res, next) => {
       });
     }
     
-    // Store in session
+    // Get user's entrepot (if column exists)
+    let id_entrepot = null;
+    try {
+      const userInfo = await executeQuery(
+        'SELECT id_entrepot FROM utilisateurs WHERE id_utilisateur = :id',
+        { id: result.p_id }
+      );
+      id_entrepot = userInfo[0]?.ID_ENTREPOT || null;
+    } catch (err) {
+      // Column might not exist yet, set to null
+      console.log('id_entrepot column not found, setting to null');
+      id_entrepot = null;
+    }
+    
+    // Store in session (normalize role to uppercase and trim)
     req.session.userId = result.p_id;
-    req.session.role = result.p_role;
+    req.session.role = result.p_role ? result.p_role.trim().toUpperCase() : null;
     req.session.nom_utilisateur = nom_utilisateur;
+    req.session.id_entrepot = id_entrepot;
+    
+    console.log('Login - Session stored:', {
+      userId: req.session.userId,
+      role: req.session.role,
+      id_entrepot: id_entrepot,
+      originalRole: result.p_role
+    });
     
     res.json({
       success: true,
       data: {
         id: result.p_id,
         role: result.p_role,
-        nom_utilisateur: nom_utilisateur
+        nom_utilisateur: nom_utilisateur,
+        id_entrepot: id_entrepot
       },
       message: 'Login successful'
     });
@@ -80,12 +103,31 @@ const getMe = async (req, res, next) => {
       });
     }
     
+    // Get user's entrepot if not in session
+    let id_entrepot = req.session.id_entrepot;
+    if (!id_entrepot) {
+      try {
+        const userInfo = await executeQuery(
+          'SELECT id_entrepot FROM utilisateurs WHERE id_utilisateur = :id',
+          { id: req.session.userId }
+        );
+        id_entrepot = userInfo[0]?.ID_ENTREPOT || null;
+        req.session.id_entrepot = id_entrepot;
+      } catch (err) {
+        // Column might not exist yet, set to null
+        console.log('id_entrepot column not found, setting to null');
+        id_entrepot = null;
+        req.session.id_entrepot = null;
+      }
+    }
+    
     res.json({
       success: true,
       data: {
         id: req.session.userId,
         role: req.session.role,
-        nom_utilisateur: req.session.nom_utilisateur
+        nom_utilisateur: req.session.nom_utilisateur,
+        id_entrepot: id_entrepot
       }
     });
   } catch (err) {
