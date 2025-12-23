@@ -69,3 +69,4 @@ COMMIT;
 2. Reconnectez-vous en tant que gestionnaire
 3. L'erreur devrait disparaître et vous pourrez créer des colis
 
+
