@@ -3,7 +3,7 @@
 -- Run this script to create all tables
 --------------------------------------------------
 
--- UTILISATEURS (add CIN)
+-- UTILISATEURS (id_entrepot will be added after entrepots table is created)
 CREATE TABLE utilisateurs (
   id_utilisateur   NUMBER PRIMARY KEY,
   nom_utilisateur  VARCHAR2(50) NOT NULL UNIQUE,
@@ -56,8 +56,7 @@ CREATE TABLE clients (
     FOREIGN KEY (id_gestionnaire_ajout) REFERENCES utilisateurs(id_utilisateur)
 );
 
--- LIVRAISONS (NO date_prevue)
--- combinations exist by default; new one created after delivery
+-- LIVRAISONS
 CREATE TABLE livraisons (
   id_livraison          NUMBER PRIMARY KEY,
   id_entrepot_source    NUMBER NOT NULL,
@@ -88,7 +87,7 @@ CREATE TABLE colis (
   ville_destination       VARCHAR2(100) NOT NULL,
   id_entrepot_localisation NUMBER, -- where it currently is
   statut                  VARCHAR2(20) DEFAULT 'ENREGISTRE'
-      CHECK (statut IN ('ENREGISTRE','EN_COURS','LIVRE','ANNULE','RECUPEREE')),
+      CHECK (statut IN ('ENREGISTRE','EN_COURS','LIVRE','RECEPTIONNEE','ANNULE','RECUPEREE')),
   date_creation           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_colis_client FOREIGN KEY (id_client) REFERENCES clients(id_client),
   CONSTRAINT fk_colis_livraison FOREIGN KEY (id_livraison) REFERENCES livraisons(id_livraison),
@@ -96,7 +95,7 @@ CREATE TABLE colis (
 );
 
 --------------------------------------------------
--- HISTORIQUES (split)
+-- HISTORIQUES
 --------------------------------------------------
 
 -- HISTORIQUE COLIS (avant/apres)
@@ -123,9 +122,17 @@ CREATE TABLE historique_statut_livraisons (
   CONSTRAINT fk_hl_user FOREIGN KEY (id_utilisateur) REFERENCES utilisateurs(id_utilisateur)
 );
 
+-- Add id_entrepot column to utilisateurs (after entrepots table exists)
+ALTER TABLE utilisateurs ADD id_entrepot NUMBER;
+
+-- Add foreign key constraint for id_entrepot
+ALTER TABLE utilisateurs 
+ADD CONSTRAINT fk_user_entrepot 
+FOREIGN KEY (id_entrepot) REFERENCES entrepots(id_entrepot);
+
+COMMENT ON COLUMN utilisateurs.id_entrepot IS 'Entrepot assigned to livreur/gestionnaire';
+
 COMMIT;
 
 PROMPT Tables created successfully!
-
-
 

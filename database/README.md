@@ -1,160 +1,93 @@
-# LogiTrack Database Scripts
+# LogiTrack Database
 
-This folder contains all SQL scripts needed to set up the LogiTrack database.
+Base de données Oracle pour le système de gestion logistique LogiTrack.
 
-## Scripts Overview
+## 📁 Structure
 
-| Script | Description |
-|--------|-------------|
-| `create_user.sql` | **First!** Creates Oracle user with privileges (run as SYSTEM) |
-| `00_drop_all.sql` | Drops all database objects (use to start fresh) |
-| `01_sequences.sql` | Creates all sequences for auto-increment IDs |
-| `02_tables.sql` | Creates all tables with constraints |
-| `03_triggers.sql` | Creates all triggers (auto-ID, price calculation, status updates) |
-| `04_package.sql` | Creates the `pkg_logitrack` package (spec and body) |
-| `05_views.sql` | Creates all views (KPI dashboard, details views) |
-| `06_test_data.sql` | Inserts test data (users, entrepots, clients, colis) |
-| `install.sql` | **Master script** - runs all scripts in order |
+- `00_drop_all.sql` - Script pour supprimer toutes les tables/vues/triggers (pour réinstallation)
+- `01_sequences.sql` - Toutes les séquences
+- `02_tables.sql` - Toutes les tables (avec `id_entrepot` dans `utilisateurs`)
+- `03_triggers.sql` - Tous les triggers (avec fixes mutating table intégrés)
+- `04_package.sql` - Package complet avec toutes les procédures
+- `05_views.sql` - Toutes les vues (avec fixes KPI)
+- `06_test_data.sql` - Données de test (avec assignation entrepots)
+- `install.sql` - Script d'installation principal
+- `create_user.sql` - Script pour créer l'utilisateur Oracle
 
-## Quick Start
+## 🚀 Installation Rapide
 
-### Step 1: Create Oracle User (First Time Only)
+### 1. Créer l'utilisateur Oracle (si nécessaire)
 
-Run as SYSTEM or SYS user:
+Connectez-vous en tant que `SYSTEM` ou `SYS`:
 
-```bash
-sqlplus system/password@database @create_user.sql
-```
-
-This creates user `logitrack` with password `logitrack123`.
-
-### Step 2: Install Database Schema
-
-Connect as the new user and run installation:
-
-```bash
-sqlplus logitrack/logitrack123@database @install.sql
-```
-
-Or in SQL*Plus:
 ```sql
--- Connect as logitrack
-sqlplus logitrack/logitrack123@database
+@create_user.sql
+```
 
--- Run installation
+### 2. Se connecter en tant que `logitrack`
+
+```sql
+CONNECT logitrack/logitrack123@XEPDB1
+```
+
+### 3. Exécuter le script d'installation
+
+```sql
 @install.sql
 ```
 
-This will run all scripts in the correct order.
+**C'est tout !** Tous les fichiers sont exécutés dans le bon ordre automatiquement.
 
-### Option 2: Install Step by Step
+## ✅ Caractéristiques
 
-If you prefer to run scripts individually:
+- ✅ **Version consolidée** - Tous les correctifs intégrés
+- ✅ **Installation en une seule commande** - `@install.sql`
+- ✅ **Fixes intégrés** - Mutating table, statuts, KPI, etc.
+- ✅ **Assignation entrepots** - Gestionnaires et livreurs assignés dans test data
+
+## 🔧 Corrections intégrées
+
+1. **Colonne `id_entrepot` dans `utilisateurs`** - Ajoutée automatiquement
+2. **Fix mutating table** - Triggers utilisent `PRAGMA AUTONOMOUS_TRANSACTION`
+3. **Statuts colis corrigés** - `ENREGISTRE`, `LIVRE`, `RECUPEREE`, etc.
+4. **Auto-création livraisons** - Nouvelle livraison créée automatiquement après livraison
+5. **KPI corrigés** - Chiffre d'affaires et compteurs corrects
+6. **Assignation entrepots** - Gestionnaires et livreurs assignés dans test data
+
+## 📝 Données de test
+
+Après l'installation, vous pouvez vous connecter avec:
+
+- **Admin**: `username=admin`, `password=admin123`
+- **Gestionnaire**: `username=gest1`, `password=gest123`
+- **Livreur**: `username=liv1`, `password=liv123`
+
+## 🔄 Pour réinstaller complètement
+
+Si vous voulez tout réinstaller à zéro (supprimer toutes les données et réinstaller):
+
+### Option 1: Script Automatique (Recommandé)
 
 ```sql
-@01_sequences.sql
-@02_tables.sql
-@03_triggers.sql
-@04_package.sql
-@05_views.sql
-@06_test_data.sql
+CONNECT logitrack/logitrack123@XEPDB1
+@reinstall.sql
 ```
 
-### Option 3: Fresh Start
-
-If you need to drop everything and start fresh:
+### Option 2: Étapes Manuelles
 
 ```sql
+-- 1. Supprimer tout
 @00_drop_all.sql
+
+-- 2. Réinstaller
 @install.sql
 ```
 
-## Installation Order
+⚠️ **Attention**: Cette opération supprime **TOUTES LES DONNÉES** de manière irréversible !
 
-The scripts **must** be run in this order:
+## 📚 Fichiers utilitaires
 
-1. **Sequences** - Required for auto-increment IDs
-2. **Tables** - Creates the database structure
-3. **Triggers** - Adds business logic triggers
-4. **Package** - Creates stored procedures
-5. **Views** - Creates reporting views
-6. **Test Data** - Inserts sample data
-
-## Test Accounts
-
-After running `06_test_data.sql`, you can login with:
-
-| Role | Username | Password |
-|------|----------|----------|
-| Admin | `admin` | `admin123` |
-| Gestionnaire | `gest1` | `gest123` |
-| Livreur | `liv1` | `liv123` |
-
-## Database Objects Created
-
-### Sequences (8)
-- `seq_utilisateurs`
-- `seq_entrepots`
-- `seq_vehicules`
-- `seq_clients`
-- `seq_livraisons`
-- `seq_colis`
-- `seq_hist_colis`
-- `seq_hist_liv`
-
-### Tables (8)
-- `utilisateurs` - Users with roles
-- `entrepots` - Warehouses
-- `vehicules` - Vehicles
-- `clients` - Clients
-- `livraisons` - Deliveries
-- `colis` - Packages
-- `historique_statut_colis` - Package status history
-- `historique_statut_livraisons` - Delivery status history
-
-### Triggers (11)
-- Auto-ID triggers (8)
-- Price calculation and auto-assignment trigger
-- Cancellation trigger
-- Delivery departure trigger
-- Delivery arrival trigger
-
-### Package
-- `pkg_logitrack` - Contains all business logic procedures
-
-### Views (4)
-- `v_livraisons_details` - Detailed delivery information
-- `v_colis_details` - Detailed package information
-- `v_vehicules_entrepots` - Vehicle and warehouse info
-- `v_kpi_dashboard` - KPI metrics
-
-## Troubleshooting
-
-### Error: "table or view does not exist"
-- Make sure you ran scripts in order
-- Check that previous scripts completed successfully
-
-### Error: "sequence does not exist"
-- Run `01_sequences.sql` first
-
-### Error: "package body does not exist"
-- Make sure `04_package.sql` ran successfully
-- The package spec must be created before the body
-
-### Error: "constraint violation"
-- You may be trying to insert duplicate data
-- Use `00_drop_all.sql` to start fresh
-
-## Notes
-
-- All scripts include `COMMIT` statements
-- Scripts use `PROMPT` for user feedback
-- The installation is idempotent (can be run multiple times if you drop first)
-- Test data includes sample entrepots, vehicles, clients, and colis
-
-## Requirements
-
-- Oracle Database 12c or higher
-- SQL*Plus or SQL Developer
-- Sufficient privileges to create tables, sequences, triggers, packages, and views
-
+- `create_user.sql` - Créer l'utilisateur Oracle
+- `fix_user.sql` - Réparer l'utilisateur si nécessaire
+- `verify_user.sql` - Vérifier l'utilisateur
+- `test_connection.sql` - Tester la connexion

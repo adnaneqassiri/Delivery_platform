@@ -16,5 +16,3 @@ COMMIT;
 
 PROMPT Sequences created successfully!
 
-
-

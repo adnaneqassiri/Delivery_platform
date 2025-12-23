@@ -351,7 +351,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
       -- 1. Sent from their entrepot (not yet delivered)
       -- 2. OR delivered to their entrepot (for marking as recovered)
       IF NOT (
-        (v_id_entrepot_colis = v_id_entrepot_user AND v_old != 'LIVRE' AND v_old != 'RECUPEREE')
+        (v_id_entrepot_colis = v_id_entrepot_user AND v_old <> 'LIVRE' AND v_old <> 'RECUPEREE')
         OR
         (v_id_entrepot_colis = v_id_entrepot_user AND v_old = 'LIVRE' AND p_statut = 'RECUPEREE')
       ) THEN

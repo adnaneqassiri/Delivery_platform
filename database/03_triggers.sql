@@ -1,5 +1,5 @@
 --------------------------------------------------
--- TRIGGERS
+-- TRIGGERS (CONSOLIDATED - All fixes integrated)
 -- Run this script to create all triggers
 --------------------------------------------------
 
@@ -88,14 +88,11 @@ END;
 
 --------------------------------------------------
 -- TRIGGER: CALCUL PRIX + ASSIGN LIVRAISON BY ville_destination
---    rules:
---      prix = poids * base
---      base STANDARD = 20, FRAGILE = 30  (you can change easily)
---      assign livraison where:
---        source = id_entrepot_localisation
---        destination city = ville_destination
---        statut livraison = 'CREEE'
 --------------------------------------------------
+--------------------------------------------------
+-- HELPER PROCEDURES FOR TRIGGERS
+--------------------------------------------------
+
 -- Helper procedure for creating livraisons (autonomous transaction)
 CREATE OR REPLACE PROCEDURE p_create_livraison_if_needed(
   p_id_entrepot_source NUMBER,
@@ -146,6 +143,36 @@ EXCEPTION
       WHEN NO_DATA_FOUND THEN
         p_id_livraison := NULL;
     END;
+END;
+/
+
+-- Helper procedure for creating new livraison after delivery (autonomous transaction)
+CREATE OR REPLACE PROCEDURE p_create_new_livraison_after_delivery(
+  p_id_entrepot_source NUMBER,
+  p_id_entrepot_destination NUMBER
+) AS
+  PRAGMA AUTONOMOUS_TRANSACTION;
+  v_exists NUMBER;
+BEGIN
+  -- Check if a CREEE livraison already exists for this route
+  SELECT COUNT(*)
+  INTO v_exists
+  FROM livraisons
+  WHERE id_entrepot_source = p_id_entrepot_source
+    AND id_entrepot_destination = p_id_entrepot_destination
+    AND statut = 'CREEE';
+  
+  -- If no CREEE livraison exists, create one
+  IF v_exists = 0 THEN
+    INSERT INTO livraisons(id_entrepot_source, id_entrepot_destination, statut, date_creation)
+    VALUES (p_id_entrepot_source, p_id_entrepot_destination, 'CREEE', SYSTIMESTAMP);
+  END IF;
+  
+  COMMIT;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- If creation fails, ignore (don't break the trigger)
+    NULL;
 END;
 /
 
@@ -213,12 +240,11 @@ END;
 
 --------------------------------------------------
 -- TRIGGER: if colis becomes ANNULE -> unassign from livraison
--- Use BEFORE UPDATE and set id_livraison directly to avoid mutating table
 --------------------------------------------------
 CREATE OR REPLACE TRIGGER trg_colis_annulation_unassign
 BEFORE UPDATE OF statut ON colis
 FOR EACH ROW
-WHEN (NEW.statut = 'ANNULEE' AND OLD.statut <> 'ANNULEE')
+WHEN (NEW.statut = 'ANNULE' AND OLD.statut <> 'ANNULE')
 BEGIN
   -- Unassign from livraison by setting id_livraison to NULL
   :NEW.id_livraison := NULL;
@@ -229,11 +255,9 @@ END;
 
 --------------------------------------------------
 -- TRIGGER: LIVRAISON DEPART (CREEE -> EN_COURS)
---    Update:
---      vehicule => EN_UTILISATION
---      livraison => EN_COURS (already)
---      colis linked => EN_COURS
---    Insert histories (livraison + each colis)
+--    Update: vehicule => EN_UTILISATION, colis => EN_COURS
+--    Insert histories
+--    Auto-create new CREEE livraison for same route
 --------------------------------------------------
 CREATE OR REPLACE TRIGGER trg_livraison_depart
 BEFORE UPDATE OF statut ON livraisons
@@ -251,11 +275,11 @@ BEGIN
     WHERE id_vehicule = :NEW.id_vehicule;
   END IF;
 
-  -- Colis statuses
+  -- Colis statuses (fix: use ENREGISTRE not ENREGISTREE)
   UPDATE colis
   SET statut = 'EN_COURS'
   WHERE id_livraison = :NEW.id_livraison
-    AND statut IN ('ENREGISTREE');
+    AND statut = 'ENREGISTRE';
 
   -- Livraison history
   INSERT INTO historique_statut_livraisons(id_livraison, statut_avant, statut_apres, id_utilisateur)
@@ -269,14 +293,37 @@ BEGIN
 END;
 /
 
+-- Trigger to auto-create new CREEE livraison when one is taken
+CREATE OR REPLACE TRIGGER trg_livraison_depart_create
+AFTER UPDATE OF statut ON livraisons
+FOR EACH ROW
+WHEN (NEW.statut = 'EN_COURS' AND OLD.statut = 'CREEE')
+DECLARE
+  PRAGMA AUTONOMOUS_TRANSACTION;
+  v_exists NUMBER;
+BEGIN
+  -- Check if a CREEE livraison already exists for this route
+  SELECT COUNT(*) INTO v_exists
+  FROM livraisons
+  WHERE id_entrepot_source = :OLD.id_entrepot_source
+    AND id_entrepot_destination = :OLD.id_entrepot_destination
+    AND statut = 'CREEE';
+  
+  -- If no CREEE livraison exists for this route, create one
+  IF v_exists = 0 THEN
+    INSERT INTO livraisons(id_entrepot_source, id_entrepot_destination, statut, date_creation)
+    VALUES (:OLD.id_entrepot_source, :OLD.id_entrepot_destination, 'CREEE', SYSTIMESTAMP);
+  END IF;
+  
+  COMMIT;
+END;
+/
+
 --------------------------------------------------
 -- TRIGGER: LIVRAISON ARRIVEE (EN_COURS -> LIVREE)
---    Update:
---      vehicule => DISPONIBLE
---      livraison => LIVREE + date_livraison
---      colis linked => LIVRE
+--    Update: vehicule => DISPONIBLE, colis => LIVRE
 --    Insert histories
---    Auto-create NEW livraison for same src/dest (always available)
+--    Auto-create NEW livraison for same route (fixed with autonomous transaction)
 --------------------------------------------------
 CREATE OR REPLACE TRIGGER trg_livraison_arrivee
 BEFORE UPDATE OF statut ON livraisons
@@ -294,9 +341,9 @@ BEGIN
     WHERE id_vehicule = :NEW.id_vehicule;
   END IF;
 
-  -- Colis statuses (delivered - mark as RECEPTIONNEE at destination)
+  -- Colis statuses (delivered - mark as LIVRE at destination)
   UPDATE colis
-  SET statut = 'RECEPTIONNEE',
+  SET statut = 'LIVRE',
       id_entrepot_localisation = :NEW.id_entrepot_destination
   WHERE id_livraison = :NEW.id_livraison
     AND statut = 'EN_COURS';
@@ -308,20 +355,19 @@ BEGIN
   -- Colis history
   FOR r IN (SELECT id_colis, statut FROM colis WHERE id_livraison = :NEW.id_livraison) LOOP
     INSERT INTO historique_statut_colis(id_colis, statut_avant, statut_apres, id_utilisateur)
-    VALUES (r.id_colis, r.statut, 'RECEPTIONNEE', v_user);
+    VALUES (r.id_colis, r.statut, 'LIVRE', v_user);
   END LOOP;
 
   -- ensure date_livraison
   :NEW.date_livraison := SYSDATE;
 
   -- Create a new livraison row for same route (keeps availability)
-  -- This is done via a procedure call to avoid mutating table error
-  -- The procedure p_create_new_livraison_if_needed will be created separately
+  -- Use autonomous transaction procedure to avoid mutating table error
   BEGIN
-    p_create_new_livraison_if_needed(:NEW.id_entrepot_source, :NEW.id_entrepot_destination);
+    p_create_new_livraison_after_delivery(:NEW.id_entrepot_source, :NEW.id_entrepot_destination);
   EXCEPTION
     WHEN OTHERS THEN
-      -- If procedure fails, continue without creating new livraison
+      -- If creation fails, continue without creating new livraison
       NULL;
   END;
 
@@ -331,6 +377,4 @@ END;
 COMMIT;
 
 PROMPT Triggers created successfully!
-
-
 

@@ -1,12 +1,18 @@
 --------------------------------------------------
--- FIX: Package syntax error
--- Recreate just the p_marquer_colis_recuperee procedure
--- This avoids potential file encoding issues
+-- FIX PACKAGE COMPILATION ERROR
+-- This script fixes the package compilation error
+-- Run this after installation if you see package errors
 --------------------------------------------------
 
--- Drop and recreate the package body
+PROMPT Fixing package compilation error...
+
+-- Drop package body and recreate it
+DROP PACKAGE BODY pkg_logitrack;
+
+-- Recreate package body (tables and views should exist now)
 CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
 
+  -- helper: get role
   FUNCTION f_role(p_id_user NUMBER) RETURN VARCHAR2 IS
     v_role VARCHAR2(20);
   BEGIN
@@ -24,13 +30,9 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
     p_cin  VARCHAR2,
     p_id   OUT NUMBER
   ) AS
-    v_role_normalized VARCHAR2(20);
   BEGIN
-    -- Normalize role to uppercase and trim whitespace
-    v_role_normalized := UPPER(TRIM(p_role));
-    
-    INSERT INTO utilisateurs(nom_utilisateur, mot_de_passe, role, cin, actif)
-    VALUES (p_nom, p_pwd, v_role_normalized, p_cin, 1)
+    INSERT INTO utilisateurs(nom_utilisateur, mot_de_passe, role, cin)
+    VALUES (p_nom, p_pwd, p_role, p_cin)
     RETURNING id_utilisateur INTO p_id;
   END;
 
@@ -209,12 +211,12 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
       receiver_cin, ville_destination, id_entrepot_localisation, statut
     ) VALUES (
       p_id_client, p_poids, p_type,
-      p_receiver_cin, p_ville_destination, p_id_entrepot_localisation, 'ENREGISTREE'
+      p_receiver_cin, p_ville_destination, p_id_entrepot_localisation, 'ENREGISTRE'
     )
     RETURNING id_colis INTO p_id_colis;
 
     INSERT INTO historique_statut_colis(id_colis, statut_avant, statut_apres, id_utilisateur)
-    VALUES (p_id_colis, NULL, 'ENREGISTREE', p_id_user);
+    VALUES (p_id_colis, NULL, 'ENREGISTRE', p_id_user);
   END;
 
   PROCEDURE p_modifier_statut_colis(
@@ -252,20 +254,14 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
       END IF;
       
       -- Gestionnaire can only modify colis:
-      -- 1. Sent from their entrepot (not yet delivered/recovered)
-      -- 2. OR received at their entrepot (for marking as recovered)
+      -- 1. Sent from their entrepot (not yet delivered)
+      -- 2. OR delivered to their entrepot (for marking as recovered)
       IF NOT (
-        (v_id_entrepot_colis = v_id_entrepot_user AND v_old != 'RECUPEREE' AND v_old != 'ENVOYEE')
+        (v_id_entrepot_colis = v_id_entrepot_user AND v_old <> 'LIVRE' AND v_old <> 'RECUPEREE')
         OR
-        (v_id_entrepot_colis = v_id_entrepot_user AND v_old = 'RECEPTIONNEE' AND p_statut = 'RECUPEREE')
+        (v_id_entrepot_colis = v_id_entrepot_user AND v_old = 'LIVRE' AND p_statut = 'RECUPEREE')
       ) THEN
         RAISE_APPLICATION_ERROR(-20011, 'Vous ne pouvez modifier que les colis de votre entrepot');
-      END IF;
-      
-      -- Gestionnaire can only change status to ENREGISTREE or ANNULEE (for expédiés)
-      -- OR to RECUPEREE (for reçus)
-      IF p_statut NOT IN ('ENREGISTREE', 'ANNULEE', 'RECUPEREE') THEN
-        RAISE_APPLICATION_ERROR(-20012, 'Gestionnaire ne peut changer le statut qu''à ENREGISTREE, ANNULEE ou RECUPEREE.');
       END IF;
     END IF;
 
@@ -306,14 +302,14 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
       END IF;
     END IF;
 
-    -- Update all colis with matching CIN (case-insensitive, trimmed) and RECEPTIONNEE status
-    -- For gestionnaire: only colis received at their entrepot
+    -- Update all colis with matching CIN (case-insensitive, trimmed) and LIVRE status
+    -- For gestionnaire: only colis delivered to their entrepot
     -- For admin: all colis
     FOR r IN (
       SELECT c.id_colis, c.statut, c.id_entrepot_localisation
       FROM colis c
       WHERE UPPER(TRIM(c.receiver_cin)) = UPPER(TRIM(p_receiver_cin))
-        AND c.statut = 'RECEPTIONNEE'
+        AND c.statut = 'LIVRE'
         AND (
           v_role = 'ADMIN' 
           OR (v_role = 'GESTIONNAIRE' AND c.id_entrepot_localisation = v_id_entrepot)
@@ -324,7 +320,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
       WHERE id_colis = r.id_colis;
 
       INSERT INTO historique_statut_colis(id_colis, statut_avant, statut_apres, id_utilisateur)
-      VALUES (r.id_colis, 'RECEPTIONNEE', 'RECUPEREE', p_id_user);
+      VALUES (r.id_colis, 'LIVRE', 'RECUPEREE', p_id_user);
       
       v_count := v_count + 1;
     END LOOP;
@@ -332,9 +328,9 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
     -- Raise error if no colis found
     IF v_count = 0 THEN
       IF v_role = 'GESTIONNAIRE' THEN
-        RAISE_APPLICATION_ERROR(-20009, 'Aucun colis trouve avec CIN ' || p_receiver_cin || ' et statut RECEPTIONNEE dans votre entrepot');
+        RAISE_APPLICATION_ERROR(-20009, 'Aucun colis trouve avec CIN ' || p_receiver_cin || ' et statut LIVRE dans votre entrepot');
       ELSE
-        RAISE_APPLICATION_ERROR(-20009, 'Aucun colis trouve avec CIN ' || p_receiver_cin || ' et statut RECEPTIONNEE');
+        RAISE_APPLICATION_ERROR(-20009, 'Aucun colis trouve avec CIN ' || p_receiver_cin || ' et statut LIVRE');
       END IF;
     END IF;
   END;
@@ -348,7 +344,17 @@ CREATE OR REPLACE PACKAGE BODY pkg_logitrack AS
 END pkg_logitrack;
 /
 
+-- Check for errors
+SELECT object_name, object_type, status 
+FROM user_objects 
+WHERE object_name = 'PKG_LOGITRACK';
+
+SELECT line, position, text 
+FROM user_errors 
+WHERE name = 'PKG_LOGITRACK' 
+ORDER BY sequence;
+
 COMMIT;
 
-PROMPT Package body recreated successfully!
+PROMPT Package body recreated. Check status above.
 
