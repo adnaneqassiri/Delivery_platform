@@ -9,8 +9,10 @@ const GestionnaireDashboard = () => {
     totalColis: 0,
     enregistre: 0,
     enCours: 0,
-    livre: 0,
-    recuperee: 0
+    envoye: 0,
+    recuperee: 0,
+    annulee: 0,
+    receptionnee: 0
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -56,7 +58,7 @@ const GestionnaireDashboard = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <KPIcard
               title="Total Colis"
               value={stats.totalColis}
@@ -64,7 +66,7 @@ const GestionnaireDashboard = () => {
               color="blue"
             />
             <KPIcard
-              title="Enregistre"
+              title="Enregistré"
               value={stats.enregistre}
               icon="📝"
               color="yellow"
@@ -76,16 +78,28 @@ const GestionnaireDashboard = () => {
               color="purple"
             />
             <KPIcard
-              title="Livre"
-              value={stats.livre}
+              title="Envoyé"
+              value={stats.envoye}
               icon="✅"
               color="green"
             />
             <KPIcard
-              title="Recuperee"
+              title="Receptionné"
+              value={stats.receptionnee}
+              icon="📥"
+              color="orange"
+            />
+            <KPIcard
+              title="Récupéré"
               value={stats.recuperee}
               icon="📬"
               color="indigo"
+            />
+            <KPIcard
+              title="Annulé"
+              value={stats.annulee}
+              icon="❌"
+              color="red"
             />
           </div>
         </main>

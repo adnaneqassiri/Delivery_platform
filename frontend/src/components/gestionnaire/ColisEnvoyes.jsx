@@ -254,7 +254,8 @@ const ColisEnvoyes = () => {
                 className: 'text-red-600 hover:text-red-900',
                 condition: (row) => {
                   const statut = row.STATUT || row.statut || row.STATUS || row.status;
-                  return statut !== 'ANNULEE' && statut !== 'RECUPEREE';
+                  // Le gestionnaire ne peut pas annuler les colis qui sont déjà envoyés (LIVRE)
+                  return statut !== 'ANNULEE' && statut !== 'RECUPEREE' && statut !== 'LIVRE';
                 }
               }
             ]}

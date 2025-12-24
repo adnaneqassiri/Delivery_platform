@@ -573,23 +573,130 @@ const getStats = async (req, res, next) => {
       });
     }
     
-    // Get all colis for this gestionnaire's entrepot (both expédiés and reçus)
-    const colis = await executeQuery(
-      `SELECT c.* 
-       FROM v_colis_details c
-       JOIN colis col ON c.id_colis = col.id_colis
-       WHERE col.id_entrepot_localisation = :id_entrepot
-       ORDER BY c.id_colis DESC`,
+    // Calculate each KPI independently according to specific rules
+    
+    // 1. Enregistré: Les colis à prendre par le livreur (colis envoyés avec statut ENREGISTRE)
+    const enregistre = await executeQuery(
+      `SELECT COUNT(*) as count
+       FROM colis col
+       LEFT JOIN livraisons l ON col.id_livraison = l.id_livraison
+       WHERE (
+         (l.id_livraison IS NOT NULL AND l.id_entrepot_source = :id_entrepot)
+         OR
+         (l.id_livraison IS NULL AND col.id_entrepot_localisation = :id_entrepot)
+       )
+       AND col.statut = 'ENREGISTRE'`,
       { id_entrepot: id_entrepot }
     );
     
-    // Calculate statistics
+    // 2. En Cours: Les colis en cours de livraison par le livreur (colis envoyés avec statut EN_COURS)
+    const enCours = await executeQuery(
+      `SELECT COUNT(*) as count
+       FROM colis col
+       LEFT JOIN livraisons l ON col.id_livraison = l.id_livraison
+       WHERE (
+         (l.id_livraison IS NOT NULL AND l.id_entrepot_source = :id_entrepot)
+         OR
+         (l.id_livraison IS NULL AND col.id_entrepot_localisation = :id_entrepot)
+       )
+       AND col.statut = 'EN_COURS'`,
+      { id_entrepot: id_entrepot }
+    );
+    
+    // 3. Envoyé: Les colis envoyés qui sont arrivés à l'entrepot de destination (colis envoyés avec statut LIVRE)
+    const envoye = await executeQuery(
+      `SELECT COUNT(*) as count
+       FROM colis col
+       LEFT JOIN livraisons l ON col.id_livraison = l.id_livraison
+       WHERE (
+         (l.id_livraison IS NOT NULL AND l.id_entrepot_source = :id_entrepot)
+         OR
+         (l.id_livraison IS NULL AND col.id_entrepot_localisation = :id_entrepot)
+       )
+       AND col.statut = 'LIVRE'`,
+      { id_entrepot: id_entrepot }
+    );
+    
+    // 4. Receptionné: Les colis reçus (qui ne sont pas encore récupérés) - colis reçus depuis un autre entrepot avec statut LIVRE
+    const receptionnee = await executeQuery(
+      `SELECT COUNT(*) as count
+       FROM colis col
+       LEFT JOIN livraisons l ON col.id_livraison = l.id_livraison
+       WHERE col.id_entrepot_localisation = :id_entrepot
+         AND col.statut = 'LIVRE'
+         AND l.id_livraison IS NOT NULL
+         AND l.id_entrepot_destination = :id_entrepot
+         AND l.id_entrepot_source <> :id_entrepot`,
+      { id_entrepot: id_entrepot }
+    );
+    
+    // 5. Récupéré: Les colis reçus et récupérés - colis reçus depuis un autre entrepot avec statut RECUPEREE
+    const recuperee = await executeQuery(
+      `SELECT COUNT(*) as count
+       FROM colis col
+       LEFT JOIN livraisons l ON col.id_livraison = l.id_livraison
+       WHERE col.id_entrepot_localisation = :id_entrepot
+         AND col.statut = 'RECUPEREE'
+         AND l.id_livraison IS NOT NULL
+         AND l.id_entrepot_destination = :id_entrepot
+         AND l.id_entrepot_source <> :id_entrepot`,
+      { id_entrepot: id_entrepot }
+    );
+    
+    // 6. Annulé: Les colis annulés par le gestionnaire - colis envoyés avec statut ANNULEE
+    const annulee = await executeQuery(
+      `SELECT COUNT(*) as count
+       FROM colis col
+       LEFT JOIN livraisons l ON col.id_livraison = l.id_livraison
+       WHERE (
+         (l.id_livraison IS NOT NULL AND l.id_entrepot_source = :id_entrepot)
+         OR
+         (l.id_livraison IS NULL AND col.id_entrepot_localisation = :id_entrepot)
+       )
+       AND col.statut = 'ANNULEE'`,
+      { id_entrepot: id_entrepot }
+    );
+    
+    // 7. Total Colis: La somme des colis Enregistré et Receptionné
+    // Enregistré: colis envoyés avec statut ENREGISTRE
+    // Receptionné: colis reçus avec statut LIVRE (reçus depuis un autre entrepot)
+    const totalColisEnregistre = await executeQuery(
+      `SELECT COUNT(*) as count
+       FROM colis col
+       LEFT JOIN livraisons l ON col.id_livraison = l.id_livraison
+       WHERE (
+         (l.id_livraison IS NOT NULL AND l.id_entrepot_source = :id_entrepot)
+         OR
+         (l.id_livraison IS NULL AND col.id_entrepot_localisation = :id_entrepot)
+       )
+       AND col.statut = 'ENREGISTRE'`,
+      { id_entrepot: id_entrepot }
+    );
+    
+    const totalColisReceptionnee = await executeQuery(
+      `SELECT COUNT(*) as count
+       FROM colis col
+       LEFT JOIN livraisons l ON col.id_livraison = l.id_livraison
+       WHERE col.id_entrepot_localisation = :id_entrepot
+         AND col.statut = 'LIVRE'
+         AND l.id_livraison IS NOT NULL
+         AND l.id_entrepot_destination = :id_entrepot
+         AND l.id_entrepot_source <> :id_entrepot`,
+      { id_entrepot: id_entrepot }
+    );
+    
+    const totalColis = (totalColisEnregistre[0]?.COUNT || totalColisEnregistre[0]?.count || 0) + 
+                       (totalColisReceptionnee[0]?.COUNT || totalColisReceptionnee[0]?.count || 0);
+    
+    // Build statistics object
     const stats = {
-      totalColis: colis.length,
-      enregistre: colis.filter(c => c.STATUT === 'ENREGISTRE').length,
-      enCours: colis.filter(c => c.STATUT === 'EN_COURS').length,
-      livre: colis.filter(c => c.STATUT === 'LIVRE').length,
-      recuperee: colis.filter(c => c.STATUT === 'RECUPEREE').length
+      totalColis: totalColis,
+      enregistre: enregistre[0]?.COUNT || enregistre[0]?.count || 0,
+      enCours: enCours[0]?.COUNT || enCours[0]?.count || 0,
+      envoye: envoye[0]?.COUNT || envoye[0]?.count || 0,
+      receptionnee: receptionnee[0]?.COUNT || receptionnee[0]?.count || 0,
+      recuperee: recuperee[0]?.COUNT || recuperee[0]?.count || 0,
+      annulee: annulee[0]?.COUNT || annulee[0]?.count || 0
     };
     
     res.json({
