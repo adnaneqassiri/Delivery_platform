@@ -194,6 +194,7 @@ const getColisEnvoyes = async (req, res, next) => {
       data: colis
     });
   } catch (err) {
+    console.error('Error in getColisEnvoyes:', err);
     next(err);
   }
 };
@@ -214,6 +215,7 @@ const getColisRecus = async (req, res, next) => {
         id_entrepot = userInfo[0]?.ID_ENTREPOT || null;
         req.session.id_entrepot = id_entrepot;
       } catch (err) {
+        console.error('Error fetching user entrepot:', err);
         id_entrepot = null;
       }
     }
@@ -230,25 +232,55 @@ const getColisRecus = async (req, res, next) => {
     // - The livraison destination is this entrepot (l.id_entrepot_destination = gestionnaire's entrepot)
     // - The livraison source is NOT this entrepot (l.id_entrepot_source != gestionnaire's entrepot)
     // - The colis is currently at this entrepot (col.id_entrepot_localisation = gestionnaire's entrepot)
-    // - Status is LIVRE (colis delivered and waiting to be picked up)
-    const colis = await executeQuery(
-      `SELECT c.* 
-       FROM v_colis_details c
-       JOIN colis col ON c.id_colis = col.id_colis
-       JOIN livraisons l ON col.id_livraison = l.id_livraison
-       WHERE l.id_entrepot_destination = :id_entrepot
-         AND l.id_entrepot_source <> :id_entrepot
-         AND col.id_entrepot_localisation = :id_entrepot
-         AND col.statut = 'LIVRE'
-       ORDER BY c.id_colis DESC`,
-      { id_entrepot: id_entrepot }
-    );
-    
-    res.json({
-      success: true,
-      data: colis
-    });
+    // - Status is LIVRE (colis delivered and waiting to be picked up) OR RECUPEREE (colis already recovered)
+    try {
+      // Query directly from v_colis_details with proper filtering
+      const colis = await executeQuery(
+        `SELECT c.* 
+         FROM v_colis_details c
+         WHERE c.id_colis IN (
+           SELECT col.id_colis
+           FROM colis col
+           LEFT JOIN livraisons l ON col.id_livraison = l.id_livraison
+           WHERE col.id_entrepot_localisation = :id_entrepot
+             AND col.statut IN ('LIVRE', 'RECUPEREE')
+             AND (
+               l.id_livraison IS NOT NULL 
+               AND l.id_entrepot_destination = :id_entrepot
+               AND l.id_entrepot_source <> :id_entrepot
+             )
+         )
+         ORDER BY c.id_colis DESC`,
+        { id_entrepot: id_entrepot }
+      );
+      
+      console.log(`[getColisRecus] Found ${colis.length} colis reçus for entrepot ${id_entrepot}`);
+      const recupereeCount = colis.filter(c => {
+        const statut = c.STATUT || c.statut || c.STATUS || c.status;
+        return statut === 'RECUPEREE';
+      }).length;
+      console.log(`[getColisRecus] Colis with RECUPEREE status: ${recupereeCount}`);
+      if (recupereeCount > 0) {
+        console.log(`[getColisRecus] Sample RECUPEREE colis:`, colis.find(c => {
+          const statut = c.STATUT || c.statut || c.STATUS || c.status;
+          return statut === 'RECUPEREE';
+        }));
+      }
+      
+      res.json({
+        success: true,
+        data: colis
+      });
+    } catch (queryErr) {
+      console.error('[getColisRecus] Query error:', queryErr);
+      console.error('[getColisRecus] Query error message:', queryErr.message);
+      console.error('[getColisRecus] Query error stack:', queryErr.stack);
+      throw queryErr;
+    }
   } catch (err) {
+    console.error('[getColisRecus] Error:', err);
+    console.error('[getColisRecus] Error message:', err.message);
+    console.error('[getColisRecus] Error stack:', err.stack);
     next(err);
   }
 };

@@ -8,6 +8,8 @@ import { STATUS_COLORS } from '../../utils/constants';
 
 const ColisRecus = () => {
   const [colis, setColis] = useState([]);
+  const [filteredColis, setFilteredColis] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'recus', 'recuperee'
   const [loading, setLoading] = useState(true);
   const [isRecoverModalOpen, setIsRecoverModalOpen] = useState(false);
   const [recoverCin, setRecoverCin] = useState('');
@@ -18,14 +20,40 @@ const ColisRecus = () => {
     fetchColis();
   }, []);
 
+  useEffect(() => {
+    // Filter colis based on selected status
+    // Handle both uppercase and lowercase column names from Oracle
+    let filtered = colis;
+    if (statusFilter === 'recus') {
+      filtered = colis.filter(c => {
+        const statut = c.STATUT || c.statut || c.STATUS || c.status;
+        return statut === 'LIVRE';
+      });
+    } else if (statusFilter === 'recuperee') {
+      filtered = colis.filter(c => {
+        const statut = c.STATUT || c.statut || c.STATUS || c.status;
+        return statut === 'RECUPEREE';
+      });
+    }
+    setFilteredColis(filtered);
+  }, [colis, statusFilter]);
+
   const fetchColis = async () => {
     try {
       const response = await api.get('/gestionnaire/colis/recus');
       if (response.data.success) {
+        console.log('Colis reçus:', response.data.data);
+        console.log('Colis avec statut RECUPEREE:', response.data.data.filter(c => (c.STATUT || c.statut) === 'RECUPEREE'));
         setColis(response.data.data);
+        setError(''); // Clear any previous errors
+      } else {
+        setError(response.data.message || 'Failed to load colis');
       }
     } catch (err) {
-      setError('Failed to load colis');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to load colis';
+      setError(errorMessage);
+      console.error('Error fetching colis:', err);
+      console.error('Error response:', err.response);
     } finally {
       setLoading(false);
     }
@@ -66,11 +94,14 @@ const ColisRecus = () => {
     { 
       key: 'STATUT', 
       label: 'Status',
-      render: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[value] || 'bg-gray-100 text-gray-800'}`}>
-          {value}
-        </span>
-      )
+      render: (value, row) => {
+        const statut = value || row.statut || row.STATUS || row.status || 'N/A';
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[statut] || 'bg-gray-100 text-gray-800'}`}>
+            {statut}
+          </span>
+        );
+      }
     },
     { key: 'TRAJET', label: 'Route', render: (value) => value || 'N/A' }
   ];
@@ -103,20 +134,34 @@ const ColisRecus = () => {
             </div>
           )}
 
-          <div className="mb-4">
-            <button
-              onClick={() => setIsRecoverModalOpen(true)}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-            >
-              Mark as Recovered
-            </button>
-            <p className="mt-2 text-sm text-gray-600">
-              Enter the receiver CIN to mark colis as recovered when they come to pick up their package.
-            </p>
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <button
+                onClick={() => setIsRecoverModalOpen(true)}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+              >
+                Mark as Recovered
+              </button>
+              <p className="mt-2 text-sm text-gray-600">
+                Enter the receiver CIN to mark colis as recovered when they come to pick up their package.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Filter:</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="all">Tous</option>
+                <option value="recus">Reçus (LIVRE)</option>
+                <option value="recuperee">Récupérés (RECUPEREE)</option>
+              </select>
+            </div>
           </div>
 
           <DataTable
-            data={colis}
+            data={filteredColis}
             columns={columns}
           />
 
