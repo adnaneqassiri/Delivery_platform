@@ -21,7 +21,7 @@ const Sidebar = () => {
 
   const gestionnaireMenuItems = [
     { path: '/gestionnaire', label: 'Dashboard', icon: '📊' },
-    { path: '/gestionnaire/colis/expedies', label: 'Colis Expédiés', icon: '📤' },
+    { path: '/gestionnaire/colis/envoyes', label: 'Colis Envoyés', icon: '📤' },
     { path: '/gestionnaire/colis/recus', label: 'Colis Reçus', icon: '📥' },
     { path: '/gestionnaire/clients', label: 'Clients', icon: '👤' },
     { path: '/gestionnaire/vehicules', label: 'Vehicules', icon: '🚛' },

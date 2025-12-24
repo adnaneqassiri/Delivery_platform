@@ -140,8 +140,8 @@ const updateVehiculeStatus = async (req, res, next) => {
   }
 };
 
-// Get colis expédiés (sent from gestionnaire's entrepot)
-const getColisExpedies = async (req, res, next) => {
+// Get colis envoyés (sent from gestionnaire's entrepot)
+const getColisEnvoyes = async (req, res, next) => {
   try {
     const id_user = req.session.userId;
     
@@ -167,14 +167,23 @@ const getColisExpedies = async (req, res, next) => {
       });
     }
     
-    // Get colis expédiés: colis sent from this gestionnaire's entrepot
-    // These are colis where id_entrepot_localisation = gestionnaire's entrepot
+    // Get colis envoyés: colis sent from this gestionnaire's entrepot
+    // These are colis where:
+    // - The livraison source is this entrepot (l.id_entrepot_source = gestionnaire's entrepot)
+    // OR the colis was created at this entrepot and hasn't been assigned to a livraison yet
     // (colis that were created/registered at this entrepot and sent from here)
     const colis = await executeQuery(
-      `SELECT c.* 
+      `SELECT DISTINCT c.* 
        FROM v_colis_details c
        JOIN colis col ON c.id_colis = col.id_colis
-       WHERE col.id_entrepot_localisation = :id_entrepot
+       LEFT JOIN livraisons l ON col.id_livraison = l.id_livraison
+       WHERE (
+         -- Colis assigned to a livraison: check that source is this entrepot
+         (l.id_livraison IS NOT NULL AND l.id_entrepot_source = :id_entrepot)
+         OR
+         -- Colis not yet assigned: check that it was created at this entrepot
+         (l.id_livraison IS NULL AND col.id_entrepot_localisation = :id_entrepot)
+       )
          AND col.statut NOT IN ('RECUPEREE')
        ORDER BY c.id_colis DESC`,
       { id_entrepot: id_entrepot }
@@ -216,18 +225,21 @@ const getColisRecus = async (req, res, next) => {
       });
     }
     
-    // Get colis reçus: colis that have arrived at this entrepot (destination entrepot)
-    // These are colis where the livraison destination is this entrepot
-    // and the colis is currently at this entrepot (id_entrepot_localisation = destination)
-    // Status should be RECEPTIONNEE (colis received at destination entrepot)
+    // Get colis reçus: colis that have arrived at this entrepot from another entrepot
+    // These are colis where:
+    // - The livraison destination is this entrepot (l.id_entrepot_destination = gestionnaire's entrepot)
+    // - The livraison source is NOT this entrepot (l.id_entrepot_source != gestionnaire's entrepot)
+    // - The colis is currently at this entrepot (col.id_entrepot_localisation = gestionnaire's entrepot)
+    // - Status is LIVRE (colis delivered and waiting to be picked up)
     const colis = await executeQuery(
       `SELECT c.* 
        FROM v_colis_details c
        JOIN colis col ON c.id_colis = col.id_colis
        JOIN livraisons l ON col.id_livraison = l.id_livraison
        WHERE l.id_entrepot_destination = :id_entrepot
+         AND l.id_entrepot_source <> :id_entrepot
          AND col.id_entrepot_localisation = :id_entrepot
-         AND col.statut = 'RECEPTIONNEE'
+         AND col.statut = 'LIVRE'
        ORDER BY c.id_colis DESC`,
       { id_entrepot: id_entrepot }
     );
@@ -336,8 +348,8 @@ const addColis = async (req, res, next) => {
   }
 };
 
-// Modify colis status for expédiés (only allow ANNULEE)
-const modifyColisStatusExpedies = async (req, res, next) => {
+// Modify colis status for envoyés (only allow ANNULEE)
+const modifyColisStatusEnvoyes = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { statut } = req.body;
@@ -347,7 +359,7 @@ const modifyColisStatusExpedies = async (req, res, next) => {
     if (statut !== 'ANNULEE') {
       return res.status(400).json({
         success: false,
-        message: 'You can only cancel (ANNULEE) colis expédiés'
+        message: 'You can only cancel (ANNULEE) colis envoyés'
       });
     }
     
@@ -559,10 +571,10 @@ const getStats = async (req, res, next) => {
 
 module.exports = {
   getStats,
-  getColisExpedies,
+  getColisEnvoyes,
   getColisRecus,
   addColis,
-  modifyColisStatusExpedies,
+  modifyColisStatusEnvoyes,
   markColisRecupereeRecus,
   getClients,
   createClient,

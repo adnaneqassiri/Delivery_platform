@@ -3,10 +3,10 @@ const router = express.Router();
 const { requireAuth, requireRole } = require('../middleware/auth');
 const {
   getStats,
-  getColisExpedies,
+  getColisEnvoyes,
   getColisRecus,
   addColis,
-  modifyColisStatusExpedies,
+  modifyColisStatusEnvoyes,
   markColisRecupereeRecus,
   getClients,
   createClient,
@@ -23,10 +23,10 @@ router.use(requireRole('GESTIONNAIRE', 'ADMIN'));
 // Statistics
 router.get('/stats', getStats);
 
-// Colis Expédiés
-router.get('/colis/expedies', getColisExpedies);
-router.post('/colis/expedies', addColis); // Add new colis
-router.put('/colis/expedies/:id/statut', modifyColisStatusExpedies); // Only ANNULEE
+// Colis Envoyés
+router.get('/colis/envoyes', getColisEnvoyes);
+router.post('/colis/envoyes', addColis); // Add new colis
+router.put('/colis/envoyes/:id/statut', modifyColisStatusEnvoyes); // Only ANNULEE
 
 // Colis Reçus
 router.get('/colis/recus', getColisRecus);

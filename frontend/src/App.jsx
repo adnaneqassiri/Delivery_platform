@@ -15,7 +15,7 @@ import AdminVehiculesManagement from './components/admin/VehiculesManagement';
 
 // Gestionnaire
 import GestionnaireDashboard from './components/gestionnaire/Dashboard';
-import ColisExpedies from './components/gestionnaire/ColisExpedies';
+import ColisEnvoyes from './components/gestionnaire/ColisEnvoyes';
 import ColisRecus from './components/gestionnaire/ColisRecus';
 import GestionnaireClients from './components/gestionnaire/ClientsManagement';
 import GestionnaireVehiculesManagement from './components/gestionnaire/VehiculesManagement';
@@ -128,10 +128,10 @@ function App() {
             }
           />
           <Route
-            path="/gestionnaire/colis/expedies"
+            path="/gestionnaire/colis/envoyes"
             element={
               <ProtectedRoute allowedRoles={[ROLES.GESTIONNAIRE, ROLES.ADMIN]}>
-                <ColisExpedies />
+                <ColisEnvoyes />
               </ProtectedRoute>
             }
           />
