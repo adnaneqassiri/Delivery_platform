@@ -1,0 +1,625 @@
+\documentclass[aspectratio=169]{beamer}
+
+% Theme
+\usetheme{Madrid}
+\usecolortheme{default}
+
+% Packages
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{tikz}
+
+% Code listing style
+\definecolor{codebg}{rgb}{0.95, 0.95, 0.95}
+\lstset{
+    backgroundcolor=\color{codebg},
+    frame=single,
+    framerule=0.5pt,
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    numbers=none,
+    tabsize=2
+}
+
+% Title page information
+\title[LogiTrack]{LogiTrack}
+\subtitle{Système de Gestion des Livraisons avec Oracle Database}
+\author[Said Jadli, Yasser Nadi, Adnane Qassiri]{
+    Said Jadli \\
+    Yasser Nadi \\
+    Adnane Qassiri
+}
+\institute[ENSA]{École Nationale des Sciences Appliquées}
+\date{2025/2026}
+
+% Logo
+\titlegraphic{\includegraphics[width=2cm]{images/logo-ensa.png}}
+
+\begin{document}
+
+% Title frame
+\begin{frame}
+    \titlepage
+\end{frame}
+
+% Table of contents
+\begin{frame}{Plan de la présentation}
+    \tableofcontents
+\end{frame}
+
+% Section 1: Introduction
+\section{Introduction}
+
+\begin{frame}{Contexte et Objectifs}
+    \begin{block}{Contexte}
+        \begin{itemize}
+            \item Défis de la logistique moderne : traçabilité, optimisation, satisfaction client
+            \item Besoin d'un système complet de gestion des livraisons
+            \item Gestion multi-entrepôts avec différents acteurs
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Objectifs}
+        \begin{itemize}
+            \item Développer un système de gestion des livraisons complet
+            \item Exploiter les fonctionnalités avancées d'Oracle Database
+            \item Créer une interface web moderne et intuitive
+            \item Garantir la traçabilité et la cohérence des données
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Vue d'ensemble du système}
+    \begin{columns}
+        \column{0.5\textwidth}
+        \textbf{LogiTrack} est un système de gestion logistique qui permet :
+        \begin{itemize}
+            \item Gestion des colis
+            \item Gestion des livraisons
+            \item Gestion des entrepôts
+            \item Suivi en temps réel
+            \item Tableaux de bord KPI
+        \end{itemize}
+        
+        \column{0.5\textwidth}
+        \begin{block}{Trois rôles principaux}
+            \begin{itemize}
+                \item \textbf{Admin} : Gestion globale
+                \item \textbf{Gestionnaire} : Gestion d'entrepôt
+                \item \textbf{Livreur} : Livraisons
+            \end{itemize}
+        \end{block}
+    \end{columns}
+\end{frame}
+
+% Section 2: Architecture
+\section{Architecture}
+
+\begin{frame}{Architecture 3-Tiers}
+    \begin{center}
+        \begin{tikzpicture}[node distance=1.5cm]
+            \node[draw, rectangle, fill=blue!20, minimum width=3.5cm, minimum height=1.2cm, text centered] (frontend) {\textbf{Frontend}\\\small React};
+            \node[draw, rectangle, fill=green!20, minimum width=3.5cm, minimum height=1.2cm, text centered, below of=frontend] (backend) {\textbf{Backend}\\\small Node.js/Express};
+            \node[draw, rectangle, fill=orange!20, minimum width=3.5cm, minimum height=1.2cm, text centered, below of=backend] (database) {\textbf{Base de données}\\\small Oracle};
+            
+            \draw[->, thick, blue] (frontend) -- node[right] {\small API REST} (backend);
+            \draw[->, thick, green] (backend) -- node[right] {\small PL/SQL} (database);
+        \end{tikzpicture}
+    \end{center}
+    
+    \vspace{0.5cm}
+    \begin{block}{Avantages}
+        \begin{itemize}
+            \item Séparation claire des responsabilités
+            \item Scalabilité et maintenabilité
+            \item Sécurité renforcée
+            \item Réutilisabilité des composants
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Stack Technologique}
+    \begin{columns}
+        \column{0.33\textwidth}
+        \begin{block}{Frontend}
+            \begin{itemize}
+                \item React 18.2
+                \item Tailwind CSS
+                \item React Router
+                \item Axios
+            \end{itemize}
+        \end{block}
+        
+        \column{0.33\textwidth}
+        \begin{block}{Backend}
+            \begin{itemize}
+                \item Node.js
+                \item Express.js
+                \item OracleDB
+                \item Express-session
+            \end{itemize}
+        \end{block}
+        
+        \column{0.33\textwidth}
+        \begin{block}{Base de données}
+            \begin{itemize}
+                \item Oracle Database
+                \item PL/SQL
+                \item Triggers
+                \item Packages
+            \end{itemize}
+        \end{block}
+    \end{columns}
+\end{frame}
+
+% Section 3: Base de données
+\section{Base de données}
+
+\begin{frame}{Modèle de données}
+    \begin{block}{8 Tables principales}
+        \begin{columns}
+            \column{0.5\textwidth}
+            \begin{itemize}
+                \item \textbf{UTILISATEURS}
+                \item \textbf{ENTREPOTS}
+                \item \textbf{CLIENTS}
+                \item \textbf{VEHICULES}
+            \end{itemize}
+            
+            \column{0.5\textwidth}
+            \begin{itemize}
+                \item \textbf{LIVRAISONS}
+                \item \textbf{COLIS}
+                \item \textbf{HISTORIQUE\_STATUT\_COLIS}
+                \item \textbf{HISTORIQUE\_STATUT\_LIVRAISONS}
+            \end{itemize}
+        \end{columns}
+    \end{block}
+    
+    \begin{block}{Relations principales}
+        \begin{itemize}
+            \item Un gestionnaire par entrepôt (1-1)
+            \item Un livreur peut avoir plusieurs livraisons (1-N)
+            \item Un colis appartient à un client et une livraison
+            \item Traçabilité complète via tables d'historique
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Fonctionnalités Oracle}
+    \begin{columns}
+        \column{0.5\textwidth}
+        \begin{block}{Séquences}
+            \begin{itemize}
+                \item 8 séquences pour génération automatique d'IDs
+                \item Utilisées par triggers BEFORE INSERT
+            \end{itemize}
+        \end{block}
+        
+        \begin{block}{Triggers}
+            \begin{itemize}
+                \item Calcul automatique du prix
+                \item Assignation automatique à livraison
+                \item Gestion des statuts
+                \item Synchronisation gestionnaire-entrepôt
+            \end{itemize}
+        \end{block}
+        
+        \column{0.5\textwidth}
+        \begin{block}{Package PL/SQL}
+            \begin{itemize}
+                \item \texttt{pkg\_logitrack}
+                \item 15+ procédures métier
+                \item Contrôle des rôles
+                \item Gestion des erreurs
+            \end{itemize}
+        \end{block}
+        
+        \begin{block}{Vues}
+            \begin{itemize}
+                \item v\_livraisons\_details
+                \item v\_colis\_details
+                \item v\_vehicules\_entrepots
+                \item v\_kpi\_dashboard
+            \end{itemize}
+        \end{block}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Exemple de Trigger}
+    \begin{block}{Calcul automatique du prix et assignation}
+        \begin{lstlisting}[language=SQL, basicstyle=\tiny]
+CREATE OR REPLACE TRIGGER trg_colis_assign_price
+BEFORE INSERT OR UPDATE ON colis
+FOR EACH ROW
+DECLARE
+  v_base NUMBER := 20;
+  v_dest_entrepot NUMBER;
+BEGIN
+  -- Calcul du prix
+  IF :NEW.type_colis = 'FRAGILE' THEN
+    v_base := 30;
+  END IF;
+  :NEW.prix := ROUND(:NEW.poids * v_base, 2);
+  
+  -- Assignation automatique à une livraison
+  -- Trouve ou crée une livraison selon la destination
+END;
+        \end{lstlisting}
+    \end{block}
+    
+    \begin{itemize}
+        \item Prix calculé : 20 MAD/kg (STANDARD) ou 30 MAD/kg (FRAGILE)
+        \item Assignation automatique à une livraison selon la destination
+        \item Création automatique de livraison si nécessaire
+    \end{itemize}
+\end{frame}
+
+% Section 4: Fonctionnalités
+\section{Fonctionnalités}
+
+\begin{frame}{Rôle : Administrateur}
+    \begin{block}{Tableau de bord}
+        \begin{itemize}
+            \item 8 KPI en temps réel
+            \begin{itemize}
+                \item Total Clients, Colis, Livraisons
+                \item Livreurs actifs, Entrepôts
+                \item Admins, Gestionnaires
+                \item Chiffre d'affaires
+            \end{itemize}
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Gestion}
+        \begin{itemize}
+            \item Utilisateurs (création, modification, activation)
+            \item Clients
+            \item Entrepôts et gestionnaires
+            \item Véhicules
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Rôle : Gestionnaire}
+    \begin{columns}
+        \column{0.5\textwidth}
+        \begin{block}{Colis Envoyés}
+            \begin{itemize}
+                \item Visualisation des colis envoyés
+                \item Filtrage par statut
+                \item Modification de statut
+                \item Annulation (si non envoyé)
+            \end{itemize}
+        \end{block}
+        
+        \begin{block}{Colis Reçus}
+            \begin{itemize}
+                \item Visualisation des colis reçus
+                \item Marquage comme récupéré (via CIN)
+                \item Filtrage (Reçus, Récupérés, Tous)
+            \end{itemize}
+        \end{block}
+        
+        \column{0.5\textwidth}
+        \begin{block}{Autres fonctionnalités}
+            \begin{itemize}
+                \item Enregistrement de nouveaux colis
+                \item Gestion des clients
+                \item Gestion des véhicules de l'entrepôt
+                \item Statistiques de l'entrepôt
+            \end{itemize}
+        \end{block}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Rôle : Livreur}
+    \begin{block}{Livraisons disponibles}
+        \begin{itemize}
+            \item Visualisation des livraisons depuis son entrepôt
+            \item Filtrage : uniquement celles avec au moins 1 colis
+            \item Prise en charge avec sélection du véhicule
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Mes livraisons}
+        \begin{itemize}
+            \item Visualisation des livraisons en cours
+            \item Détails : source, destination, nombre de colis
+            \item Marquage comme livrée
+            \item Statistiques personnelles
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Automatismes}
+        \begin{itemize}
+            \item Mise à jour automatique du statut véhicule
+            \item Mise à jour automatique du statut des colis
+            \item Création automatique d'une nouvelle livraison
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+% Section 5: Sécurité et Performance
+\section{Sécurité et Performance}
+
+\begin{frame}{Sécurité}
+    \begin{columns}
+        \column{0.5\textwidth}
+        \begin{block}{Authentification}
+            \begin{itemize}
+                \item Sessions serveur (express-session)
+                \item Cookies httpOnly
+                \item Vérification des rôles
+            \end{itemize}
+        \end{block}
+        
+        \begin{block}{Autorisation}
+            \begin{itemize}
+                \item Middleware de contrôle d'accès
+                \item Vérification dans les procédures PL/SQL
+                \item Routes protégées frontend
+            \end{itemize}
+        \end{block}
+        
+        \column{0.5\textwidth}
+        \begin{block}{Intégrité des données}
+            \begin{itemize}
+                \item Contraintes CHECK
+                \item Contraintes UNIQUE
+                \item Clés étrangères
+                \item Validation dans triggers
+            \end{itemize}
+        \end{block}
+        
+        \begin{block}{Traçabilité}
+            \begin{itemize}
+                \item Historiques complets
+                \item Identification des acteurs
+                \item Timestamps automatiques
+            \end{itemize}
+        \end{block}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Optimisations}
+    \begin{block}{Base de données}
+        \begin{itemize}
+            \item Pool de connexions Oracle (min: 1, max: 5)
+            \item Vues pré-calculées pour KPI
+            \item Index uniques sur colonnes critiques
+            \item Requêtes optimisées avec JOINs
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Backend}
+        \begin{itemize}
+            \item Logique métier dans procédures stockées
+            \item Curseurs Oracle (SYS\_REFCURSOR)
+            \item Gestion asynchrone (async/await)
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Frontend}
+        \begin{itemize}
+            \item Composants React optimisés
+            \item Chargement conditionnel
+            \item Requêtes ciblées
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+% Section 6: Démonstration
+\section{Démonstration}
+
+\begin{frame}{Flux de travail : Enregistrement d'un colis}
+    \begin{enumerate}
+        \item \textbf{Gestionnaire} enregistre un nouveau colis
+        \begin{itemize}
+            \item Saisie : client, poids, type, destinataire, destination
+        \end{itemize}
+        \item \textbf{Trigger automatique} :
+        \begin{itemize}
+            \item Calcule le prix (poids × tarif)
+            \item Trouve ou crée une livraison vers la destination
+            \item Assigne le colis à la livraison
+        \end{itemize}
+        \item \textbf{Colis} apparaît dans "Colis Envoyés" avec statut ENREGISTRE
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{Flux de travail : Livraison}
+    \begin{enumerate}
+        \item \textbf{Livreur} consulte les livraisons disponibles
+        \item \textbf{Livreur} prend en charge une livraison
+        \begin{itemize}
+            \item Sélectionne un véhicule disponible
+        \end{itemize}
+        \item \textbf{Trigger automatique} :
+        \begin{itemize}
+            \item Statut livraison : CREEE → EN\_COURS
+            \item Statut véhicule : DISPONIBLE → EN\_UTILISATION
+            \item Statut colis : ENREGISTRE → EN\_COURS
+            \item Crée les historiques
+        \end{itemize}
+        \item \textbf{Livreur} livre la livraison
+        \item \textbf{Trigger automatique} :
+        \begin{itemize}
+            \item Statut livraison : EN\_COURS → LIVREE
+            \item Statut véhicule : EN\_UTILISATION → DISPONIBLE
+            \item Statut colis : EN\_COURS → LIVRE
+            \item Crée une nouvelle livraison CREEE pour la même route
+        \end{itemize}
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{Flux de travail : Récupération}
+    \begin{enumerate}
+        \item \textbf{Colis} arrive à destination (statut : LIVRE)
+        \item \textbf{Colis} apparaît dans "Colis Reçus" du gestionnaire de destination
+        \item \textbf{Destinataire} se présente avec son CIN
+        \item \textbf{Gestionnaire} marque le colis comme récupéré
+        \begin{itemize}
+            \item Vérification du CIN
+        \end{itemize}
+        \item \textbf{Statut} : LIVRE → RECUPEREE
+        \item \textbf{Colis} comptabilisé dans le chiffre d'affaires
+    \end{enumerate}
+\end{frame}
+
+% Section 7: Résultats
+\section{Résultats}
+
+\begin{frame}{Objectifs atteints}
+    \begin{block}{✓ Conception}
+        \begin{itemize}
+            \item Base de données relationnelle normalisée (8 tables)
+            \item Modèle de données cohérent et complet
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{✓ Implémentation Oracle}
+        \begin{itemize}
+            \item Logique métier dans packages PL/SQL
+            \item Automatisation via triggers
+            \item Vues pour simplifier les requêtes
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{✓ Application web}
+        \begin{itemize}
+            \item Interface moderne et intuitive (React)
+            \item Gestion des rôles et permissions
+            \item Tableaux de bord KPI
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{✓ Traçabilité}
+        \begin{itemize}
+            \item Historiques complets des changements
+            \item Identification des acteurs
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Points forts}
+    \begin{columns}
+        \column{0.5\textwidth}
+        \begin{block}{Cohérence}
+            \begin{itemize}
+                \item Logique métier centralisée
+                \item Intégrité garantie par Oracle
+                \item Automatisation complète
+            \end{itemize}
+        \end{block}
+        
+        \begin{block}{Sécurité}
+            \begin{itemize}
+                \item Contrôle d'accès multi-niveaux
+                \item Validation des données
+                \item Traçabilité complète
+            \end{itemize}
+        \end{block}
+        
+        \column{0.5\textwidth}
+        \begin{block}{Performance}
+            \begin{itemize}
+                \item Pool de connexions
+                \item Vues optimisées
+                \item Requêtes efficaces
+            \end{itemize}
+        \end{block}
+        
+        \begin{block}{Maintenabilité}
+            \begin{itemize}
+                \item Code structuré
+                \item Documentation claire
+                \item Architecture modulaire
+            \end{itemize}
+        \end{block}
+    \end{columns}
+\end{frame}
+
+% Section 8: Perspectives
+\section{Perspectives}
+
+\begin{frame}{Évolutions possibles}
+    \begin{block}{Fonctionnalités}
+        \begin{itemize}
+            \item Notifications email/SMS
+            \item Suivi GPS en temps réel
+            \item Module de facturation
+            \item Application mobile pour livreurs
+            \item Portail client
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Techniques}
+        \begin{itemize}
+            \item Hashage des mots de passe (bcrypt)
+            \item Mise en cache Redis
+            \item Tests automatisés
+            \item CI/CD pipeline
+            \item Monitoring avancé
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Métier}
+        \begin{itemize}
+            \item Optimisation des routes
+            \item Gestion des stocks
+            \item Intégration transporteurs externes
+            \item Module qualité
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+% Section 9: Conclusion
+\section{Conclusion}
+
+\begin{frame}{Conclusion}
+    \begin{block}{Réalisations}
+        \begin{itemize}
+            \item Système complet de gestion des livraisons
+            \item Exploitation avancée d'Oracle Database
+            \item Interface web moderne et intuitive
+            \item Automatisation des processus métier
+            \item Traçabilité complète
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Apports pédagogiques}
+        \begin{itemize}
+            \item Modélisation relationnelle
+            \item Programmation PL/SQL avancée
+            \item Intégration base de données / application
+            \item Architecture 3-tiers
+        \end{itemize}
+    \end{block}
+    
+    \vspace{0.5cm}
+    \begin{center}
+        \Large \textbf{Merci pour votre attention !}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Questions ?}
+    \begin{center}
+        \Huge \textbf{Questions ?}
+        
+        \vspace{1cm}
+        
+        \Large Contact : \\
+        \vspace{0.5cm}
+        Said Jadli, Yasser Nadi, Adnane Qassiri
+    \end{center}
+\end{frame}
+
+\end{document}
+

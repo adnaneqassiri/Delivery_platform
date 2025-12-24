@@ -1,0 +1,926 @@
+\documentclass[a4paper,12pt]{article}
+
+% Language and encoding
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath} 
+\usepackage{booktabs}
+\usepackage{amsmath}   % For mathematical equations
+\usepackage{amssymb}   % For additional math symbols
+\usepackage{graphicx}  % For including figures
+\usepackage{booktabs}  % For better tables
+\usepackage{hyperref}  % For hyperlinks (optional)
+\usepackage{cite}  
+\usepackage{array}
+\usepackage{caption}
+
+\usepackage{url} % Pour gérer les URLs dans les références
+\usepackage{hyperref} % Pour les liens colorés
+\hypersetup{
+    colorlinks=true, % Active les liens colorés
+    linkcolor=black, % Couleur des liens internes (noir)
+    urlcolor=blue,   % Couleur des URLs (bleu)
+    citecolor=black  % Couleur des citations (noir)
+}
+
+% Page layout and spacing
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\usepackage{float}
+
+
+\renewcommand{\thesection}{\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+
+
+% Graphics and figures
+\usepackage{graphicx}
+\graphicspath{ {./images/} }
+\usepackage{tikz}
+\usepackage{tikzpagenodes}
+
+% Hyperlinks and references
+\usepackage{hyperref}
+
+% Tables
+\usepackage{booktabs} % For \toprule, \midrule, and \bottomrule
+\usepackage{array}    % For custom column formatting
+\usepackage{longtable} % If long tables are needed
+\usepackage{multirow} % If multirow is needed in tables
+
+% Bibliography
+\usepackage{biblatex}
+\addbibresource{references.bib} % Adjust the bibliography file name
+
+% For placeholder text
+\usepackage{blindtext}
+
+% Additional utilities for tables
+\usepackage{tabularx} % If width-adjustable columns are needed
+\usepackage{colortbl} % If color in tables is required
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codebg}{rgb}{0.95, 0.95, 0.95} % Couleur de fond
+\definecolor{codeborder}{rgb}{0.5, 0.5, 0.5} % Couleur de la bordure
+
+\lstset{
+    backgroundcolor=\color{codebg},
+    frame=single,
+    framerule=0.5pt,
+    rulecolor=\color{codeborder},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+    numbers=none,
+    tabsize=2
+}
+
+% Informations du rapport
+\newcommand{\titre}{Système de gestion des livraisons en utilisant une base de données Oracle}
+\newcommand{\UE}{UAE}
+\newcommand{\sujet}{Ingénierie des bases de données}
+\newcommand{\enseignant}{Prof. Outair Anass}
+\newcommand{\eleves}{
+    Said Jadli \\
+    Yasser Nadi \\
+    Adnane Qassiri
+
+}
+\setlength{\parskip}{1.4\baselineskip}  % Set line spacing for paragraphs
+\begin{document}
+
+% Page de garde
+\begin{titlepage}
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/logo-ensa.png} % Insérer le logo ici
+    
+    \vspace{1cm}
+    
+    {\LARGE \textsc{Ingénierie des bases de données} \par} % Nom de l'école
+    
+    \vspace{2cm}
+    
+
+    \hrulefill \\[0.4cm]
+    {\huge \textbf{Systéme de gestion des livraisons en utilisant une base de donné oracle} \par} % Titre principal
+    \hrulefill \\[1.5cm]
+   
+    
+    \vspace{2cm}
+    
+    \begin{minipage}{0.5\textwidth}
+        \Large
+        \raggedright
+        \textbf{Élève :} \\ % Liste des étudiants
+        \eleves
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.4\textwidth}
+        \Large
+        \raggedleft
+        \textbf{Enseignant :} \\ % Nom de l'enseignant
+        \enseignant
+    \end{minipage}
+
+    \vfill
+    {\Large 2025/2026} % Date du jour
+\end{titlepage}
+\tableofcontents
+\newpage
+
+
+
+\section{Introduction}
+
+Dans le contexte actuel de la logistique et de la gestion des livraisons, les entreprises font face à des défis croissants liés à la traçabilité, à l'optimisation des ressources et à la satisfaction client. Le système LogiTrack a été développé pour répondre à ces besoins en proposant une solution complète de gestion des livraisons basée sur une architecture moderne et une base de données Oracle robuste.
+
+Ce projet consiste en la conception et l'implémentation d'un système de gestion des livraisons permettant de gérer l'ensemble du cycle de vie des colis, depuis leur enregistrement jusqu'à leur récupération par le destinataire. Le système intègre trois rôles principaux : l'administrateur, le gestionnaire d'entrepôt et le livreur, chacun ayant des responsabilités et des permissions spécifiques.
+
+L'objectif principal de ce projet est de démontrer l'utilisation efficace d'Oracle Database dans un contexte applicatif réel, en exploitant ses fonctionnalités avancées telles que les triggers, les packages PL/SQL, les vues, les séquences et les contraintes d'intégrité référentielle. Le système garantit la cohérence des données, l'automatisation des processus métier et la traçabilité complète des opérations.
+
+Le présent rapport décrit l'ensemble du processus de développement, depuis l'analyse des besoins jusqu'à l'implémentation finale, en passant par la conception de la base de données et le développement des interfaces utilisateur.
+
+
+
+\section{Étude et choix des technologies}
+\subsection{Choix de l'architecture}
+
+L'architecture choisie pour LogiTrack est une architecture en trois tiers (3-tier architecture) séparant clairement la présentation, la logique métier et la persistance des données :
+
+\begin{itemize}
+    \item \textbf{Couche Présentation} : Interface web développée avec React, offrant une expérience utilisateur moderne et réactive
+    \item \textbf{Couche Application} : API REST développée avec Node.js et Express.js, servant d'intermédiaire entre le frontend et la base de données
+    \item \textbf{Couche Données} : Base de données Oracle contenant l'ensemble des données et la logique métier via des packages PL/SQL
+\end{itemize}
+
+Cette architecture présente plusieurs avantages :
+\begin{itemize}
+    \item Séparation claire des responsabilités
+    \item Scalabilité et maintenabilité
+    \item Réutilisabilité des composants
+    \item Sécurité renforcée avec la logique métier centralisée dans la base de données
+\end{itemize}
+
+\subsection{Technologies utilisées}
+
+\subsubsection{Oracle Database}
+
+Oracle Database a été choisi comme système de gestion de base de données pour plusieurs raisons :
+
+\begin{itemize}
+    \item \textbf{Robustesse} : Oracle est reconnu pour sa fiabilité et sa capacité à gérer de grandes quantités de données
+    \item \textbf{Fonctionnalités avancées} : Support des triggers, packages PL/SQL, vues matérialisées, et autres fonctionnalités avancées
+    \item \textbf{Intégrité des données} : Système de contraintes puissant permettant de garantir la cohérence des données
+    \item \textbf{Performance} : Optimiseur de requêtes sophistiqué et gestion efficace des transactions
+    \item \textbf{Sécurité} : Gestion fine des permissions et des rôles utilisateurs
+\end{itemize}
+
+Dans ce projet, Oracle Database stocke non seulement les données mais également une grande partie de la logique métier via des packages PL/SQL, ce qui garantit la cohérence et la sécurité des opérations.
+
+\subsubsection{Frontend : React, HTML, CSS, Tailwind CSS}
+
+Le frontend a été développé avec les technologies suivantes :
+
+\begin{itemize}
+    \item \textbf{React 18.2.0} : Bibliothèque JavaScript moderne pour la construction d'interfaces utilisateur réactives et modulaires
+    \item \textbf{React Router DOM 6.20.0} : Gestion de la navigation et du routage côté client
+    \item \textbf{Tailwind CSS 3.3.6} : Framework CSS utility-first permettant un développement rapide et cohérent de l'interface
+    \item \textbf{Axios 1.6.2} : Client HTTP pour les communications avec l'API backend
+    \item \textbf{Headless UI} : Composants UI accessibles et sans style pour React
+\end{itemize}
+
+Le choix de React permet de créer une application web moderne, performante et maintenable, avec une séparation claire des composants et une gestion d'état efficace.
+
+\subsubsection{Backend : Express.js, Node.js}
+
+Le backend utilise les technologies suivantes :
+
+\begin{itemize}
+    \item \textbf{Node.js} : Environnement d'exécution JavaScript côté serveur
+    \item \textbf{Express.js 4.18.2} : Framework web minimaliste et flexible pour Node.js
+    \item \textbf{OracleDB 6.0.3} : Driver Oracle officiel pour Node.js permettant la connexion à Oracle Database
+    \item \textbf{Express-session 1.17.3} : Gestion des sessions utilisateur côté serveur
+    \item \textbf{CORS 2.8.5} : Configuration des politiques de partage de ressources entre origines
+    \item \textbf{Body-parser} : Middleware pour parser les corps de requêtes HTTP
+\end{itemize}
+
+Le backend agit comme une couche d'abstraction mince entre le frontend et la base de données, principalement pour :
+\begin{itemize}
+    \item Gérer l'authentification et les sessions
+    \item Appeler les procédures stockées Oracle
+    \item Exécuter des requêtes SQL
+    \item Gérer les erreurs et les validations
+\end{itemize}
+
+\subsubsection{Autres outils}
+
+\begin{itemize}
+    \item \textbf{Dotenv} : Gestion des variables d'environnement pour la configuration
+    \item \textbf{Nodemon} : Outil de développement pour le rechargement automatique du serveur
+    \item \textbf{React Scripts} : Outils de build et de développement pour React
+    \item \textbf{PostCSS et Autoprefixer} : Traitement CSS avancé
+\end{itemize}
+
+
+
+
+
+\section{Analyse et conception du système}
+\subsection{Analyse fonctionnelle}
+
+\subsubsection{Acteurs du système}
+
+Le système LogiTrack identifie trois acteurs principaux, chacun ayant des responsabilités et des permissions spécifiques :
+
+\textbf{1. Administrateur (ADMIN)}
+\begin{itemize}
+    \item Visualisation du tableau de bord avec les indicateurs clés de performance (KPI)
+    \item Gestion complète des utilisateurs (création, modification, activation/désactivation)
+    \item Gestion des clients
+    \item Gestion des entrepôts (création, affectation de gestionnaires)
+    \item Gestion des véhicules
+    \item Accès à toutes les fonctionnalités du système
+\end{itemize}
+
+\textbf{2. Gestionnaire d'entrepôt (GESTIONNAIRE)}
+\begin{itemize}
+    \item Visualisation des statistiques de colis de son entrepôt
+    \item Gestion des colis envoyés depuis son entrepôt
+    \item Gestion des colis reçus dans son entrepôt
+    \item Enregistrement de nouveaux colis
+    \item Modification du statut des colis (sauf ceux déjà envoyés)
+    \item Marquage des colis comme récupérés par le destinataire
+    \item Gestion des clients
+    \item Gestion des véhicules de son entrepôt
+\end{itemize}
+
+\textbf{3. Livreur (LIVREUR)}
+\begin{itemize}
+    \item Visualisation des livraisons disponibles depuis son entrepôt
+    \item Prise en charge de livraisons disponibles
+    \item Visualisation de ses livraisons en cours
+    \item Marquage des livraisons comme livrées
+    \item Visualisation de ses statistiques de livraison
+\end{itemize}
+
+\subsubsection{Diagramme de cas d'utilisation}
+
+Les principaux cas d'utilisation du système incluent :
+
+\begin{itemize}
+    \item Authentification et gestion de session
+    \item Gestion des utilisateurs (Admin uniquement)
+    \item Gestion des entrepôts (Admin)
+    \item Gestion des clients (Admin et Gestionnaire)
+    \item Gestion des véhicules (Admin et Gestionnaire)
+    \item Enregistrement de colis (Gestionnaire)
+    \item Modification du statut des colis (Gestionnaire)
+    \item Marquage des colis comme récupérés (Gestionnaire)
+    \item Prise en charge de livraisons (Livreur)
+    \item Livraison de colis (Livreur)
+    \item Consultation des statistiques et KPI
+\end{itemize}
+
+\subsection{Modélisation des données}
+
+\subsubsection{Modèle conceptuel de données (MCD)}
+
+Le modèle conceptuel de données représente les entités principales du système et leurs relations :
+
+\textbf{Entités principales :}
+\begin{itemize}
+    \item \textbf{UTILISATEURS} : Représente tous les utilisateurs du système (Admin, Gestionnaire, Livreur)
+    \item \textbf{ENTREPOTS} : Représente les entrepôts du réseau logistique
+    \item \textbf{CLIENTS} : Représente les clients qui envoient des colis
+    \item \textbf{VEHICULES} : Représente les véhicules utilisés pour les livraisons
+    \item \textbf{LIVRAISONS} : Représente les livraisons entre entrepôts
+    \item \textbf{COLIS} : Représente les colis à livrer
+    \item \textbf{HISTORIQUE\_STATUT\_COLIS} : Historique des changements de statut des colis
+    \item \textbf{HISTORIQUE\_STATUT\_LIVRAISONS} : Historique des changements de statut des livraisons
+\end{itemize}
+
+\textbf{Relations principales :}
+\begin{itemize}
+    \item Un utilisateur peut être assigné à un entrepôt (Gestionnaire, Livreur)
+    \item Un entrepôt a un gestionnaire responsable (relation 1-1)
+    \item Un client est ajouté par un gestionnaire
+    \item Un colis appartient à un client et peut être assigné à une livraison
+    \item Une livraison relie deux entrepôts (source et destination)
+    \item Une livraison est assignée à un livreur et un véhicule
+    \item Un véhicule appartient à un entrepôt
+\end{itemize}
+
+\subsubsection{Modèle logique de données (MLD)}
+
+Le modèle logique de données détaille la structure des tables avec leurs attributs et contraintes :
+
+\textbf{Table UTILISATEURS :}
+\begin{itemize}
+    \item id\_utilisateur (PK, NUMBER)
+    \item nom\_utilisateur (UNIQUE, VARCHAR2(50))
+    \item mot\_de\_passe (VARCHAR2(100))
+    \item cin (UNIQUE, VARCHAR2(20))
+    \item role (CHECK: 'ADMIN', 'GESTIONNAIRE', 'LIVREUR')
+    \item actif (CHECK: 0 ou 1)
+    \item id\_entrepot (FK vers ENTREPOTS)
+    \item date\_creation (TIMESTAMP)
+\end{itemize}
+
+\textbf{Table ENTREPOTS :}
+\begin{itemize}
+    \item id\_entrepot (PK, NUMBER)
+    \item adresse (VARCHAR2(200))
+    \item ville (VARCHAR2(100))
+    \item telephone (VARCHAR2(20))
+    \item id\_user (FK vers UTILISATEURS, UNIQUE - un gestionnaire par entrepôt)
+    \item date\_creation (TIMESTAMP)
+\end{itemize}
+
+\textbf{Table CLIENTS :}
+\begin{itemize}
+    \item id\_client (PK, NUMBER)
+    \item prenom, nom (VARCHAR2(50))
+    \item cin (UNIQUE, VARCHAR2(20))
+    \item telephone, email, adresse
+    \item id\_gestionnaire\_ajout (FK vers UTILISATEURS)
+    \item date\_creation (TIMESTAMP)
+\end{itemize}
+
+\textbf{Table VEHICULES :}
+\begin{itemize}
+    \item id\_vehicule (PK, NUMBER)
+    \item immatriculation (UNIQUE, VARCHAR2(20))
+    \item type\_vehicule (CHECK: 'PETIT\_CAMION', 'GRAND\_CAMION')
+    \item statut (CHECK: 'DISPONIBLE', 'EN\_UTILISATION', 'MAINTENANCE')
+    \item id\_entrepot (FK vers ENTREPOTS)
+    \item date\_creation (TIMESTAMP)
+\end{itemize}
+
+\textbf{Table LIVRAISONS :}
+\begin{itemize}
+    \item id\_livraison (PK, NUMBER)
+    \item id\_entrepot\_source (FK vers ENTREPOTS)
+    \item id\_entrepot\_destination (FK vers ENTREPOTS)
+    \item id\_livreur (FK vers UTILISATEURS)
+    \item id\_vehicule (FK vers VEHICULES)
+    \item statut (CHECK: 'CREEE', 'EN\_COURS', 'LIVREE', 'ANNULEE')
+    \item date\_creation (TIMESTAMP)
+    \item date\_livraison (DATE)
+\end{itemize}
+
+\textbf{Table COLIS :}
+\begin{itemize}
+    \item id\_colis (PK, NUMBER)
+    \item id\_client (FK vers CLIENTS)
+    \item id\_livraison (FK vers LIVRAISONS)
+    \item poids (NUMBER, CHECK: >= 1)
+    \item type\_colis (CHECK: 'STANDARD', 'FRAGILE')
+    \item prix (NUMBER(10,2) - calculé automatiquement)
+    \item receiver\_cin (VARCHAR2(20))
+    \item ville\_destination (VARCHAR2(100))
+    \item id\_entrepot\_localisation (FK vers ENTREPOTS)
+    \item statut (CHECK: 'ENREGISTRE', 'EN\_COURS', 'LIVRE', 'RECEPTIONNEE', 'ANNULE', 'RECUPEREE')
+    \item date\_creation (TIMESTAMP)
+\end{itemize}
+
+\textbf{Tables d'historique :}
+\begin{itemize}
+    \item HISTORIQUE\_STATUT\_COLIS : id\_history, id\_colis, statut\_avant, statut\_apres, date\_changement, id\_utilisateur
+    \item HISTORIQUE\_STATUT\_LIVRAISONS : id\_history, id\_livraison, statut\_avant, statut\_apres, date\_changement, id\_utilisateur
+\end{itemize}
+
+
+
+
+
+
+
+
+\section{Conception de la base de données Oracle}
+\subsection{Description des tables}
+
+La base de données LogiTrack est composée de 8 tables principales organisées de manière relationnelle :
+
+\textbf{1. UTILISATEURS} : Stocke tous les utilisateurs du système avec leurs informations d'authentification et leur rôle. Chaque utilisateur peut être assigné à un entrepôt (pour les gestionnaires et livreurs).
+
+\textbf{2. ENTREPOTS} : Représente les entrepôts du réseau logistique. Chaque entrepôt peut avoir un gestionnaire responsable (relation 1-1 via id\_user).
+
+\textbf{3. CLIENTS} : Contient les informations des clients qui envoient des colis. Chaque client est ajouté par un gestionnaire.
+
+\textbf{4. VEHICULES} : Stocke les informations des véhicules (petit ou grand camion) avec leur statut et leur entrepôt d'affectation.
+
+\textbf{5. LIVRAISONS} : Représente les livraisons entre entrepôts. Une livraison relie un entrepôt source à un entrepôt destination et peut être assignée à un livreur et un véhicule.
+
+\textbf{6. COLIS} : Contient les informations des colis à livrer, incluant le calcul automatique du prix, l'assignation automatique à une livraison, et le suivi de la localisation.
+
+\textbf{7. HISTORIQUE\_STATUT\_COLIS} : Enregistre l'historique complet des changements de statut des colis pour la traçabilité.
+
+\textbf{8. HISTORIQUE\_STATUT\_LIVRAISONS} : Enregistre l'historique complet des changements de statut des livraisons.
+
+\subsubsection{Contraintes et relations}
+
+\textbf{Contraintes d'intégrité référentielle :}
+\begin{itemize}
+    \item Toutes les clés étrangères sont définies avec des contraintes FOREIGN KEY
+    \item Les relations sont maintenues automatiquement par Oracle
+    \item Suppression en cascade gérée par les triggers et procédures
+\end{itemize}
+
+\textbf{Contraintes de domaine :}
+\begin{itemize}
+    \item \textbf{Rôles utilisateurs} : CHECK (role IN ('ADMIN','GESTIONNAIRE','LIVREUR'))
+    \item \textbf{Statut utilisateur} : CHECK (actif IN (0,1))
+    \item \textbf{Type véhicule} : CHECK (type\_vehicule IN ('PETIT\_CAMION','GRAND\_CAMION'))
+    \item \textbf{Statut véhicule} : CHECK (statut IN ('DISPONIBLE','EN\_UTILISATION','MAINTENANCE'))
+    \item \textbf{Statut livraison} : CHECK (statut IN ('CREEE','EN\_COURS','LIVREE','ANNULEE'))
+    \item \textbf{Type colis} : CHECK (type\_colis IN ('STANDARD','FRAGILE'))
+    \item \textbf{Statut colis} : CHECK (statut IN ('ENREGISTRE','EN\_COURS','LIVRE','RECEPTIONNEE','ANNULE','RECUPEREE'))
+    \item \textbf{Poids colis} : CHECK (poids >= 1)
+\end{itemize}
+
+\textbf{Contraintes d'unicité :}
+\begin{itemize}
+    \item nom\_utilisateur (UNIQUE)
+    \item cin dans utilisateurs (UNIQUE)
+    \item cin dans clients (UNIQUE)
+    \item immatriculation (UNIQUE)
+    \item Un gestionnaire actif par entrepôt (via index unique sur entrepots.id\_user)
+\end{itemize}
+
+\subsection{Sequences}
+
+Huit séquences ont été créées pour générer automatiquement les identifiants primaires :
+
+\begin{lstlisting}[language=SQL]
+CREATE SEQUENCE seq_utilisateurs START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE seq_entrepots    START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE seq_vehicules    START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE seq_clients      START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE seq_livraisons   START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE seq_colis        START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE seq_hist_colis   START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE seq_hist_liv     START WITH 1 INCREMENT BY 1;
+\end{lstlisting}
+
+Ces séquences sont utilisées par des triggers BEFORE INSERT pour générer automatiquement les identifiants lors de l'insertion de nouvelles lignes.
+
+\subsection{Triggers}
+
+Plusieurs triggers ont été implémentés pour automatiser les processus métier et garantir la cohérence des données :
+
+\textbf{1. Triggers de génération d'ID :}
+\begin{itemize}
+    \item Un trigger BEFORE INSERT pour chaque table utilisant une séquence
+    \item Génération automatique de l'ID si NULL
+\end{itemize}
+
+\textbf{2. Trigger de calcul de prix et assignation de livraison :}
+\begin{itemize}
+    \item \textbf{trg\_colis\_assign\_price} : Calcule automatiquement le prix du colis (20 MAD/kg pour STANDARD, 30 MAD/kg pour FRAGILE) et assigne le colis à une livraison existante ou en crée une nouvelle selon la ville de destination
+\end{itemize}
+
+\textbf{3. Triggers de gestion des livraisons :}
+\begin{itemize}
+    \item \textbf{trg\_livraison\_depart} : Lors du passage d'une livraison de CREEE à EN\_COURS, met à jour le statut du véhicule à EN\_UTILISATION et les colis à EN\_COURS, et crée les historiques
+    \item \textbf{trg\_livraison\_arrivee} : Lors du passage d'une livraison de EN\_COURS à LIVREE, met à jour le statut du véhicule à DISPONIBLE, les colis à LIVRE, et crée automatiquement une nouvelle livraison CREEE pour la même route
+\end{itemize}
+
+\textbf{4. Triggers de synchronisation gestionnaire-entrepôt :}
+\begin{itemize}
+    \item Gestion bidirectionnelle de la relation entre gestionnaires et entrepôts
+    \item Utilisation de PRAGMA AUTONOMOUS\_TRANSACTION pour éviter les erreurs de table mutante
+    \item Validation qu'un gestionnaire actif ne peut être assigné qu'à un seul entrepôt
+\end{itemize}
+
+\textbf{5. Trigger d'annulation de colis :}
+\begin{itemize}
+    \item \textbf{trg\_colis\_annulation\_unassign} : Lorsqu'un colis est annulé, le retire automatiquement de sa livraison
+\end{itemize}
+
+\subsection{Packages}
+
+Le package \textbf{pkg\_logitrack} centralise toute la logique métier et les opérations critiques :
+
+\textbf{Procédures d'authentification :}
+\begin{itemize}
+    \item \textbf{p\_creer\_utilisateur} : Création d'un nouvel utilisateur
+    \item \textbf{p\_login} : Authentification et vérification des credentials
+\end{itemize}
+
+\textbf{Procédures de gestion :}
+\begin{itemize}
+    \item \textbf{p\_creer\_entrepot} : Création d'un entrepôt avec gestionnaire
+    \item \textbf{p\_creer\_vehicule} : Création d'un véhicule
+    \item \textbf{p\_changer\_entrepot\_vehicule} : Changement d'entrepôt d'un véhicule (avec contrôle de rôle)
+    \item \textbf{p\_creer\_client} : Création d'un client (réservé aux gestionnaires/admin)
+\end{itemize}
+
+\textbf{Procédures de gestion des livraisons :}
+\begin{itemize}
+    \item \textbf{p\_prendre\_livraison} : Un livreur prend en charge une livraison disponible
+    \item \textbf{p\_livrer\_livraison} : Marquage d'une livraison comme livrée
+    \item \textbf{p\_modifier\_statut\_livraison} : Modification du statut d'une livraison (gestionnaire/admin)
+\end{itemize}
+
+\textbf{Procédures de gestion des colis :}
+\begin{itemize}
+    \item \textbf{p\_ajouter\_colis} : Ajout d'un nouveau colis avec calcul automatique du prix
+    \item \textbf{p\_modifier\_statut\_colis} : Modification du statut d'un colis avec historique
+    \item \textbf{p\_marquer\_colis\_recuperee} : Marquage d'un colis comme récupéré par le destinataire (via CIN)
+\end{itemize}
+
+\textbf{Procédures de consultation :}
+\begin{itemize}
+    \item \textbf{p\_get\_kpis} : Récupération des indicateurs clés de performance via un curseur
+\end{itemize}
+
+Toutes les procédures incluent des contrôles de rôle pour garantir la sécurité et l'intégrité des opérations.
+
+\subsection{Views}
+
+Quatre vues ont été créées pour simplifier les requêtes complexes et fournir des données agrégées :
+
+\textbf{1. v\_livraisons\_details :}
+\begin{itemize}
+    \item Affiche les détails complets des livraisons avec source, destination, livreur, véhicule, statut et nombre de colis
+    \item Jointures avec entrepots, utilisateurs et vehicules
+\end{itemize}
+
+\textbf{2. v\_colis\_details :}
+\begin{itemize}
+    \item Affiche les détails complets des colis avec client, trajet calculé, localisation actuelle
+    \item Calcule automatiquement le trajet (entrepôt source → entrepôt destination ou entrepôt → ville destination)
+\end{itemize}
+
+\textbf{3. v\_vehicules\_entrepots :}
+\begin{itemize}
+    \item Affiche les véhicules avec leur entrepôt d'affectation actuel
+\end{itemize}
+
+\textbf{4. v\_kpi\_dashboard :}
+\begin{itemize}
+    \item Vue agrégée pour le tableau de bord admin
+    \item Calcule : nombre total de colis, nombre de livraisons livrées, chiffre d'affaires, nombre de livreurs actifs, nombre d'entrepôts, nombre de clients
+\end{itemize}
+
+
+
+
+
+
+
+\section{Réalisation et implémentation}
+\subsection{Mise en place de l'environnement de développement}
+
+L'environnement de développement a été configuré avec les outils suivants :
+
+\textbf{Base de données :}
+\begin{itemize}
+    \item Oracle Database (version XE ou supérieure)
+    \item Oracle Instant Client pour la connexion depuis Node.js
+    \item Scripts SQL organisés en fichiers séquentiels (00\_drop\_all.sql à 06\_test\_data.sql)
+    \item Script d'installation automatique (install.sql) exécutant tous les fichiers dans l'ordre
+\end{itemize}
+
+\textbf{Backend :}
+\begin{itemize}
+    \item Node.js (v14 ou supérieur)
+    \item Configuration via fichier .env pour les variables d'environnement (DB\_HOST, DB\_PORT, DB\_SERVICE, DB\_USER, DB\_PASSWORD, SESSION\_SECRET, PORT)
+    \item Utilisation d'un pool de connexions Oracle pour optimiser les performances
+    \item Middleware CORS configuré pour accepter les requêtes depuis le frontend
+\end{itemize}
+
+\textbf{Frontend :}
+\begin{itemize}
+    \item React 18 avec Create React App
+    \item Configuration via fichier .env (REACT\_APP\_API\_URL)
+    \item Tailwind CSS pour le styling
+    \item Routing avec React Router DOM
+\end{itemize}
+
+\subsection{Implémentation du backend}
+
+Le backend a été structuré de manière modulaire :
+
+\textbf{Structure des dossiers :}
+\begin{itemize}
+    \item \textbf{config/} : Configuration de la base de données (pool de connexions Oracle)
+    \item \textbf{controllers/} : Logique métier pour chaque rôle (adminController, gestionnaireController, livreurController, authController)
+    \item \textbf{middleware/} : Middleware d'authentification et gestion d'erreurs
+    \item \textbf{routes/} : Définition des routes API pour chaque module
+    \item \textbf{utils/} : Utilitaires (oracleHelper pour exécuter procédures et requêtes)
+\end{itemize}
+
+\textbf{Points clés de l'implémentation :}
+\begin{itemize}
+    \item \textbf{Authentification} : Sessions serveur avec express-session, vérification des rôles via middleware
+    \item \textbf{Appels Oracle} : Utilisation de procédures stockées via oracleHelper pour garantir la sécurité et la cohérence
+    \item \textbf{Gestion des erreurs} : Middleware centralisé pour capturer et formater les erreurs Oracle
+    \item \textbf{API REST} : Endpoints organisés par rôle (/api/admin, /api/gestionnaire, /api/livreur)
+\end{itemize}
+
+\textbf{Exemple d'endpoint (KPIs Admin) :}
+\begin{lstlisting}[language=JavaScript]
+const getKPIs = async (req, res, next) => {
+  try {
+    const kpis = await executeQuery('SELECT * FROM v_kpi_dashboard');
+    // Calcul séparé pour livraisons livrées uniquement
+    const livraisonsLivreeCount = await executeQuery(
+      "SELECT COUNT(*) as count FROM livraisons WHERE statut = 'LIVREE'"
+    );
+    res.json({ success: true, data: { ... } });
+  } catch (err) {
+    next(err);
+  }
+};
+\end{lstlisting}
+
+\subsection{Implémentation de la base de données Oracle}
+
+L'implémentation de la base de données suit une approche structurée :
+
+\textbf{Ordre d'exécution des scripts :}
+\begin{enumerate}
+    \item \textbf{00\_drop\_all.sql} : Suppression de tous les objets existants (pour réinstallation)
+    \item \textbf{01\_sequences.sql} : Création des séquences
+    \item \textbf{02\_tables.sql} : Création des tables avec contraintes
+    \item \textbf{03\_triggers.sql} : Création des triggers
+    \item \textbf{04\_package.sql} : Création du package pkg\_logitrack
+    \item \textbf{05\_views.sql} : Création des vues
+    \item \textbf{06\_test\_data.sql} : Insertion des données de test
+\end{enumerate}
+
+\textbf{Techniques utilisées :}
+\begin{itemize}
+    \item \textbf{PRAGMA AUTONOMOUS\_TRANSACTION} : Pour éviter les erreurs de table mutante dans les triggers
+    \item \textbf{Procedures autonomes} : Pour la synchronisation bidirectionnelle entre tables
+    \item \textbf{Contrôle de flux} : Utilisation de flags pour éviter les boucles infinies
+    \item \textbf{Gestion d'erreurs} : RAISE\_APPLICATION\_ERROR pour les erreurs métier personnalisées
+\end{itemize}
+
+\textbf{Exemple de trigger complexe :}
+\begin{lstlisting}[language=SQL]
+CREATE OR REPLACE TRIGGER trg_colis_assign_price
+BEFORE INSERT OR UPDATE ON colis
+FOR EACH ROW
+DECLARE
+  v_base NUMBER := 20;
+  v_dest_entrepot NUMBER;
+  v_livraison NUMBER;
+BEGIN
+  -- Calcul du prix
+  IF :NEW.type_colis = 'FRAGILE' THEN
+    v_base := 30;
+  END IF;
+  :NEW.prix := ROUND(:NEW.poids * v_base, 2);
+  
+  -- Assignation automatique à une livraison
+  -- ... logique de recherche/création de livraison
+END;
+\end{lstlisting}
+
+\subsection{Implémentation du frontend}
+
+Le frontend utilise une architecture composant React moderne :
+
+\textbf{Structure des composants :}
+\begin{itemize}
+    \item \textbf{components/admin/} : Dashboard, gestion des utilisateurs, clients, entrepôts, véhicules
+    \item \textbf{components/gestionnaire/} : Dashboard, colis envoyés, colis reçus, gestion clients et véhicules
+    \item \textbf{components/livreur/} : Dashboard, livraisons disponibles, mes livraisons
+    \item \textbf{components/common/} : Composants réutilisables (Sidebar, Navbar, DataTable, KPIcard)
+    \item \textbf{components/auth/} : Page de connexion
+\end{itemize}
+
+\textbf{Points clés de l'implémentation :}
+\begin{itemize}
+    \item \textbf{Context API} : AuthContext pour la gestion globale de l'authentification
+    \item \textbf{Routes protégées} : Composant ProtectedRoute vérifiant l'authentification et les rôles
+    \item \textbf{Service API} : Module api.js centralisant tous les appels HTTP avec axios
+    \item \textbf{Composants réutilisables} : DataTable pour l'affichage tabulaire avec actions conditionnelles
+    \item \textbf{Interface responsive} : Utilisation de Tailwind CSS pour un design moderne et adaptatif
+\end{itemize}
+
+\textbf{Exemple de composant (Dashboard Admin) :}
+\begin{itemize}
+    \item Affichage de 8 KPI cards (Total Clients, Total Colis, Total Livraisons, Active Livreurs, Total Entrepôts, Admins, Gestionnaires, Chiffre d'Affaires)
+    \item Appel API pour récupérer les données
+    \item Gestion des états de chargement et d'erreur
+\end{itemize}
+
+\subsection{Gestion des erreurs et validations}
+
+\textbf{Côté backend :}
+\begin{itemize}
+    \item \textbf{Middleware d'erreur centralisé} : Capture toutes les erreurs et les formate de manière cohérente
+    \item \textbf{Validation des rôles} : Vérification systématique des permissions avant chaque opération
+    \item \textbf{Gestion des erreurs Oracle} : Extraction et formatage des messages d'erreur Oracle (RAISE\_APPLICATION\_ERROR)
+    \item \textbf{Validation des données} : Vérification des paramètres requis avant l'appel aux procédures
+\end{itemize}
+
+\textbf{Côté base de données :}
+\begin{itemize}
+    \item \textbf{Contraintes CHECK} : Validation des valeurs autorisées pour les statuts et types
+    \item \textbf{Contraintes UNIQUE} : Prévention des doublons (nom utilisateur, CIN, immatriculation)
+    \item \textbf{Contraintes FOREIGN KEY} : Garantie de l'intégrité référentielle
+    \item \textbf{RAISE\_APPLICATION\_ERROR} : Messages d'erreur métier explicites dans les procédures
+\end{itemize}
+
+\textbf{Côté frontend :}
+\begin{itemize}
+    \item \textbf{Gestion des erreurs API} : Affichage de messages d'erreur utilisateur-friendly
+    \item \textbf{Validation des formulaires} : Vérification des champs requis avant soumission
+    \item \textbf{États de chargement} : Indicateurs visuels pendant les opérations asynchrones
+    \item \textbf{Gestion des sessions} : Redirection automatique vers la page de connexion si la session expire
+\end{itemize}
+
+
+
+
+
+\section{Sécurité et performance}
+\subsection{Sécurité du système}
+
+Plusieurs mécanismes de sécurité ont été implémentés à différents niveaux :
+
+\textbf{1. Authentification et autorisation :}
+\begin{itemize}
+    \item \textbf{Sessions serveur} : Utilisation d'express-session avec cookies httpOnly pour prévenir les attaques XSS
+    \item \textbf{Vérification des rôles} : Middleware requireRole vérifiant le rôle utilisateur avant l'accès aux endpoints
+    \item \textbf{Contrôle d'accès dans les procédures} : Chaque procédure PL/SQL vérifie le rôle de l'utilisateur avant d'exécuter l'opération
+    \item \textbf{Routes protégées} : Le frontend vérifie l'authentification et les rôles avant d'afficher les composants
+\end{itemize}
+
+\textbf{2. Sécurité des données :}
+\begin{itemize}
+    \item \textbf{Mots de passe} : Stockés en clair dans la base (à améliorer avec hashage en production)
+    \item \textbf{Validation des entrées} : Contraintes CHECK et validation dans les procédures pour prévenir les injections SQL
+    \item \textbf{Requêtes paramétrées} : Utilisation systématique de bind variables dans les requêtes Oracle
+    \item \textbf{Isolation des transactions} : Utilisation de PRAGMA AUTONOMOUS\_TRANSACTION pour éviter les conflits
+\end{itemize}
+
+\textbf{3. Intégrité des données :}
+\begin{itemize}
+    \item \textbf{Contraintes d'intégrité référentielle} : Toutes les clés étrangères sont protégées
+    \item \textbf{Contraintes de domaine} : Validation des valeurs autorisées (statuts, types)
+    \item \textbf{Contraintes d'unicité} : Prévention des doublons critiques
+    \item \textbf{Triggers de validation} : Vérification des règles métier avant insertion/mise à jour
+\end{itemize}
+
+\textbf{4. Traçabilité :}
+\begin{itemize}
+    \item \textbf{Historiques complets} : Tous les changements de statut sont enregistrés avec l'utilisateur et la date
+    \item \textbf{Date de création} : Timestamp automatique pour toutes les entités
+    \item \textbf{Identification des acteurs} : Chaque opération est liée à un utilisateur identifié
+\end{itemize}
+
+\textbf{5. Sécurité applicative :}
+\begin{itemize}
+    \item \textbf{CORS configuré} : Restriction des origines autorisées (localhost:3000 en développement)
+    \item \textbf{Variables d'environnement} : Secrets stockés dans .env (non versionné)
+    \item \textbf{Gestion des erreurs} : Messages d'erreur génériques pour ne pas exposer d'informations sensibles
+\end{itemize}
+
+\subsection{Optimisation des performances}
+
+Plusieurs techniques d'optimisation ont été mises en place :
+
+\textbf{1. Base de données :}
+\begin{itemize}
+    \item \textbf{Pool de connexions} : Utilisation d'un pool Oracle (min: 1, max: 5) pour réutiliser les connexions
+    \item \textbf{Vues matérialisables} : Vues pré-calculées pour les KPI et les détails complexes
+    \item \textbf{Index uniques} : Index sur les colonnes fréquemment recherchées (nom\_utilisateur, cin, immatriculation)
+    \item \textbf{Requêtes optimisées} : Utilisation de JOINs efficaces et agrégations dans les vues
+\end{itemize}
+
+\textbf{2. Backend :}
+\begin{itemize}
+    \item \textbf{Appels procédures stockées} : Logique métier exécutée côté base de données pour réduire les allers-retours
+    \item \textbf{Curseurs Oracle} : Utilisation de SYS\_REFCURSOR pour retourner des résultats efficaces
+    \item \textbf{Gestion asynchrone} : Utilisation d'async/await pour éviter le blocage
+    \item \textbf{Mise en cache} : Possibilité de mettre en cache les KPI (non implémenté mais préparé)
+\end{itemize}
+
+\textbf{3. Frontend :}
+\begin{itemize}
+    \item \textbf{Composants React optimisés} : Utilisation de hooks pour éviter les re-renders inutiles
+    \item \textbf{Chargement conditionnel} : Affichage des données uniquement après chargement
+    \item \textbf{Requêtes ciblées} : Appels API uniquement pour les données nécessaires à l'affichage
+    \item \textbf{Interface réactive} : Feedback immédiat pour les actions utilisateur
+\end{itemize}
+
+\textbf{4. Architecture :}
+\begin{itemize}
+    \item \textbf{Séparation des responsabilités} : Logique métier dans la base, API mince, frontend léger
+    \item \textbf{Transactions optimisées} : Auto-commit pour les opérations simples, transactions explicites pour les opérations complexes
+    \item \textbf{Éviter les N+1 queries} : Utilisation de JOINs dans les vues plutôt que des requêtes multiples
+\end{itemize}
+
+\textbf{Points d'amélioration possibles :}
+\begin{itemize}
+    \item Mise en cache Redis pour les KPI
+    \item Pagination pour les grandes listes
+    \item Index supplémentaires sur les colonnes fréquemment filtrées
+    \item Compression des réponses HTTP
+    \item Lazy loading des composants React
+\end{itemize}
+
+
+
+
+
+\section{Conclusion et perspectives}
+\subsection{Conclusion générale}
+
+Le projet LogiTrack a permis de développer un système complet de gestion des livraisons en exploitant les fonctionnalités avancées d'Oracle Database. L'architecture en trois tiers (frontend React, backend Node.js, base de données Oracle) a démontré son efficacité pour créer une application moderne, sécurisée et performante.
+
+\textbf{Objectifs atteints :}
+\begin{itemize}
+    \item ✓ Conception d'une base de données relationnelle normalisée avec 8 tables principales
+    \item ✓ Implémentation de la logique métier dans Oracle via packages PL/SQL
+    \item ✓ Automatisation des processus via triggers (calcul de prix, assignation de livraisons, gestion des statuts)
+    \item ✓ Développement d'une interface web moderne et intuitive avec React
+    \item ✓ Gestion des rôles et permissions (Admin, Gestionnaire, Livreur)
+    \item ✓ Traçabilité complète via tables d'historique
+    \item ✓ Système de KPI pour le suivi des performances
+\end{itemize}
+
+\textbf{Points forts du projet :}
+\begin{itemize}
+    \item \textbf{Cohérence des données} : La logique métier centralisée dans Oracle garantit l'intégrité des données
+    \item \textbf{Automatisation} : Les triggers et procédures automatisent les processus critiques (calcul de prix, assignation de livraisons)
+    \item \textbf{Sécurité} : Contrôle d'accès à plusieurs niveaux (frontend, backend, base de données)
+    \item \textbf{Maintenabilité} : Code structuré et modulaire, documentation claire
+    \item \textbf{Expérience utilisateur} : Interface moderne et intuitive avec feedback en temps réel
+\end{itemize}
+
+\textbf{Défis rencontrés et solutions :}
+\begin{itemize}
+    \item \textbf{Erreurs de table mutante} : Résolues avec PRAGMA AUTONOMOUS\_TRANSACTION
+    \item \textbf{Synchronisation bidirectionnelle} : Gérée via flags et procédures autonomes
+    \item \textbf{Gestion des sessions} : Implémentation d'un système de sessions serveur robuste
+    \item \textbf{Optimisation des requêtes} : Utilisation de vues et curseurs pour améliorer les performances
+\end{itemize}
+
+Ce projet a permis de mettre en pratique les concepts d'ingénierie des bases de données, notamment l'utilisation avancée d'Oracle Database, la modélisation relationnelle, et l'intégration avec une application web moderne.
+
+\subsection{Perspectives d'évolution}
+
+Plusieurs améliorations et extensions peuvent être envisagées pour enrichir le système :
+
+\textbf{1. Fonctionnalités supplémentaires :}
+\begin{itemize}
+    \item \textbf{Gestion des notifications} : Alertes par email/SMS pour les changements de statut
+    \item \textbf{Suivi GPS} : Intégration de la géolocalisation pour le suivi en temps réel des livraisons
+    \item \textbf{Module de facturation} : Génération automatique de factures pour les clients
+    \item \textbf{Statistiques avancées} : Graphiques et analyses prédictives
+    \item \textbf{Application mobile} : Développement d'une app mobile pour les livreurs
+    \item \textbf{Portail client} : Interface pour que les clients puissent suivre leurs colis
+\end{itemize}
+
+\textbf{2. Améliorations techniques :}
+\begin{itemize}
+    \item \textbf{Sécurité renforcée} : Hashage des mots de passe (bcrypt), authentification à deux facteurs
+    \item \textbf{Performance} : Mise en cache Redis, pagination, index supplémentaires
+    \item \textbf{API REST complète} : Documentation Swagger/OpenAPI
+    \item \textbf{Tests automatisés} : Tests unitaires et d'intégration
+    \item \textbf{CI/CD} : Pipeline de déploiement automatique
+    \item \textbf{Monitoring} : Outils de monitoring et logging avancés
+\end{itemize}
+
+\textbf{3. Optimisations base de données :}
+\begin{itemize}
+    \item \textbf{Vues matérialisées} : Pour les KPI complexes avec rafraîchissement automatique
+    \item \textbf{Partitionnement} : Partitionnement des tables d'historique par date
+    \item \textbf{Archivage} : Système d'archivage des données anciennes
+    \item \textbf{Backup automatique} : Stratégie de sauvegarde et restauration
+\end{itemize}
+
+\textbf{4. Évolutions métier :}
+\begin{itemize}
+    \item \textbf{Multi-entrepôts avancés} : Gestion de réseaux d'entrepôts complexes
+    \item \textbf{Optimisation des routes} : Algorithme d'optimisation des trajets de livraison
+    \item \textbf{Gestion des stocks} : Module de gestion des stocks dans les entrepôts
+    \item \textbf{Intégration transporteurs} : Interface avec des transporteurs externes
+    \item \textbf{Module de qualité} : Suivi de la qualité de service et satisfaction client
+\end{itemize}
+
+\textbf{5. Scalabilité :}
+\begin{itemize}
+    \item \textbf{Microservices} : Découpage en microservices pour une meilleure scalabilité
+    \item \textbf{Load balancing} : Répartition de charge pour gérer plus d'utilisateurs
+    \item \textbf{Base de données distribuée} : Oracle RAC pour haute disponibilité
+    \item \textbf{CDN} : Utilisation d'un CDN pour les assets statiques
+\end{itemize}
+
+En conclusion, LogiTrack constitue une base solide pour un système de gestion logistique professionnel, avec de nombreuses possibilités d'évolution pour répondre aux besoins croissants des entreprises de logistique moderne.
+
+
+
+
+
+\end{document}
