@@ -21,17 +21,9 @@ const GestionnaireDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/gestionnaire/colis');
+      const response = await api.get('/gestionnaire/stats');
       if (response.data.success) {
-        const colis = response.data.data;
-        const stats = {
-          totalColis: colis.length,
-          enregistre: colis.filter(c => c.STATUT === 'ENREGISTRE').length,
-          enCours: colis.filter(c => c.STATUT === 'EN_COURS').length,
-          livre: colis.filter(c => c.STATUT === 'LIVRE').length,
-          recuperee: colis.filter(c => c.STATUT === 'RECUPEREE').length
-        };
-        setStats(stats);
+        setStats(response.data.data);
       }
     } catch (err) {
       setError('Failed to load statistics');

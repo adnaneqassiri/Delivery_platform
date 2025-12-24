@@ -87,6 +87,181 @@ END;
 /
 
 --------------------------------------------------
+-- PACKAGE: Prevent infinite loops in synchronization triggers
+--------------------------------------------------
+CREATE OR REPLACE PACKAGE pkg_sync_flag AS
+  g_syncing_user NUMBER := 0;
+  g_syncing_entrepot NUMBER := 0;
+END pkg_sync_flag;
+/
+
+--------------------------------------------------
+-- PROCEDURE: Validate gestionnaire unique per entrepot (autonomous transaction)
+--------------------------------------------------
+CREATE OR REPLACE PROCEDURE p_validate_gestionnaire_unique_entrepot(
+  p_id_entrepot NUMBER,
+  p_id_utilisateur NUMBER
+) AS
+  PRAGMA AUTONOMOUS_TRANSACTION;
+  v_count NUMBER;
+BEGIN
+  -- Check if another active gestionnaire is already assigned to this entrepot
+  SELECT COUNT(*)
+  INTO v_count
+  FROM utilisateurs
+  WHERE id_entrepot = p_id_entrepot
+    AND role = 'GESTIONNAIRE'
+    AND actif = 1
+    AND id_utilisateur <> p_id_utilisateur;
+  
+  IF v_count > 0 THEN
+    RAISE_APPLICATION_ERROR(-20020, 'Cet entrepot a deja un gestionnaire actif assigne');
+  END IF;
+  
+  COMMIT;
+END;
+/
+
+--------------------------------------------------
+-- TRIGGER: VALIDATION - Un gestionnaire actif ne peut être assigné qu'à un seul entrepot
+--------------------------------------------------
+CREATE OR REPLACE TRIGGER trg_gestionnaire_unique_entrepot_before
+BEFORE INSERT OR UPDATE OF id_entrepot, role, actif ON utilisateurs
+FOR EACH ROW
+WHEN (NEW.role = 'GESTIONNAIRE' AND NEW.actif = 1 AND NEW.id_entrepot IS NOT NULL)
+BEGIN
+  -- Use autonomous transaction procedure to avoid mutating table error
+  p_validate_gestionnaire_unique_entrepot(:NEW.id_entrepot, :NEW.id_utilisateur);
+END;
+/
+
+-- Procedure to synchronize entrepots.id_user (autonomous transaction)
+-- Only sync if not already syncing to avoid deadlock
+CREATE OR REPLACE PROCEDURE p_sync_entrepot_gestionnaire(
+  p_id_entrepot NUMBER,
+  p_id_utilisateur NUMBER
+) AS
+  PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+  -- Prevent deadlock: only sync if not already syncing from the other direction
+  IF pkg_sync_flag.g_syncing_entrepot = 0 THEN
+    pkg_sync_flag.g_syncing_user := 1;
+    BEGIN
+      -- Synchronize: Update entrepots.id_user to point to this gestionnaire
+      UPDATE entrepots
+      SET id_user = p_id_utilisateur
+      WHERE id_entrepot = p_id_entrepot
+        AND (id_user IS NULL OR id_user <> p_id_utilisateur);
+    EXCEPTION
+      WHEN OTHERS THEN
+        pkg_sync_flag.g_syncing_user := 0;
+        RAISE;
+    END;
+    pkg_sync_flag.g_syncing_user := 0;
+  END IF;
+  COMMIT;
+END;
+/
+
+-- Synchronize entrepots.id_user after update (avoid infinite loop and mutating table)
+CREATE OR REPLACE TRIGGER trg_gestionnaire_unique_entrepot_after
+AFTER INSERT OR UPDATE OF id_entrepot, role, actif ON utilisateurs
+FOR EACH ROW
+WHEN (NEW.role = 'GESTIONNAIRE' AND NEW.actif = 1 AND NEW.id_entrepot IS NOT NULL)
+BEGIN
+  -- Use autonomous transaction procedure to avoid mutating table error
+  -- Only sync if entrepot doesn't already have this gestionnaire
+  p_sync_entrepot_gestionnaire(:NEW.id_entrepot, :NEW.id_utilisateur);
+END;
+/
+
+--------------------------------------------------
+-- PROCEDURE: Validate entrepot gestionnaire (autonomous transaction)
+--------------------------------------------------
+CREATE OR REPLACE PROCEDURE p_validate_entrepot_gestionnaire(
+  p_id_user NUMBER
+) AS
+  PRAGMA AUTONOMOUS_TRANSACTION;
+  v_role VARCHAR2(20);
+  v_actif NUMBER;
+BEGIN
+  -- Verify that id_user is a gestionnaire
+  SELECT role, actif
+  INTO v_role, v_actif
+  FROM utilisateurs
+  WHERE id_utilisateur = p_id_user;
+  
+  IF v_role <> 'GESTIONNAIRE' THEN
+    RAISE_APPLICATION_ERROR(-20021, 'Seul un gestionnaire peut etre assigne a un entrepot');
+  END IF;
+  
+  IF v_actif <> 1 THEN
+    RAISE_APPLICATION_ERROR(-20022, 'Seul un gestionnaire actif peut etre assigne a un entrepot');
+  END IF;
+  
+  COMMIT;
+END;
+/
+
+--------------------------------------------------
+-- TRIGGER: VALIDATION - Un entrepot ne peut avoir qu'un seul gestionnaire actif
+-- (via entrepots.id_user) et synchronisation bidirectionnelle
+--------------------------------------------------
+CREATE OR REPLACE TRIGGER trg_entrepot_unique_gestionnaire_before
+BEFORE INSERT OR UPDATE OF id_user ON entrepots
+FOR EACH ROW
+WHEN (NEW.id_user IS NOT NULL)
+BEGIN
+  -- Use autonomous transaction procedure to avoid mutating table error
+  p_validate_entrepot_gestionnaire(:NEW.id_user);
+END;
+/
+
+-- Procedure to synchronize utilisateurs.id_entrepot (autonomous transaction)
+-- Only sync if not already syncing to avoid deadlock
+CREATE OR REPLACE PROCEDURE p_sync_gestionnaire_entrepot(
+  p_id_user NUMBER,
+  p_id_entrepot NUMBER
+) AS
+  PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+  -- Prevent deadlock: only sync if not already syncing from the other direction
+  IF pkg_sync_flag.g_syncing_user = 0 THEN
+    pkg_sync_flag.g_syncing_entrepot := 1;
+    BEGIN
+      -- Synchronize: Update utilisateurs.id_entrepot to point to this entrepot
+      UPDATE utilisateurs
+      SET id_entrepot = p_id_entrepot
+      WHERE id_utilisateur = p_id_user
+        AND role = 'GESTIONNAIRE'
+        AND actif = 1
+        AND (id_entrepot IS NULL OR id_entrepot <> p_id_entrepot);
+    EXCEPTION
+      WHEN OTHERS THEN
+        pkg_sync_flag.g_syncing_entrepot := 0;
+        RAISE;
+    END;
+    pkg_sync_flag.g_syncing_entrepot := 0;
+  END IF;
+  COMMIT;
+END;
+/
+
+-- Synchronize utilisateurs.id_entrepot after update (avoid infinite loop and mutating table)
+-- NOTE: This trigger is kept for backward compatibility, but ideally synchronization
+-- should only happen in one direction (gestionnaire -> entrepot) to avoid deadlocks
+CREATE OR REPLACE TRIGGER trg_entrepot_unique_gestionnaire_after
+AFTER INSERT OR UPDATE OF id_user ON entrepots
+FOR EACH ROW
+WHEN (NEW.id_user IS NOT NULL)
+BEGIN
+  -- Use autonomous transaction procedure to avoid mutating table error
+  -- Only sync if gestionnaire doesn't already have this entrepot
+  p_sync_gestionnaire_entrepot(:NEW.id_user, :NEW.id_entrepot);
+END;
+/
+
+--------------------------------------------------
 -- TRIGGER: CALCUL PRIX + ASSIGN LIVRAISON BY ville_destination
 --------------------------------------------------
 --------------------------------------------------

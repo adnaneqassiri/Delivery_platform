@@ -15,10 +15,15 @@ const getKPIs = async (req, res, next) => {
           chiffre_affaire: 0,
           livreurs_count: 0,
           entrepots_count: 0,
-          clients_count: 0
+          clients_count: 0,
+          admins_count: 0,
+          gestionnaires_count: 0
         }
       });
     }
+    
+    // Oracle returns column names in uppercase, so we need to handle both cases
+    const kpiData = kpis[0];
     
     // Get additional counts for admins and gestionnaires
     const adminCount = await executeQuery(
@@ -31,12 +36,18 @@ const getKPIs = async (req, res, next) => {
     res.json({
       success: true,
       data: {
-        ...kpis[0],
-        admins_count: adminCount[0]?.COUNT || 0,
-        gestionnaires_count: gestionnaireCount[0]?.COUNT || 0
+        colis_count: kpiData.COLIS_COUNT || kpiData.colis_count || 0,
+        livraisons_count: kpiData.LIVRAISONS_COUNT || kpiData.livraisons_count || 0,
+        chiffre_affaire: kpiData.CHIFFRE_AFFAIRE || kpiData.chiffre_affaire || 0,
+        livreurs_count: kpiData.LIVREURS_COUNT || kpiData.livreurs_count || 0,
+        entrepots_count: kpiData.ENTREPOTS_COUNT || kpiData.entrepots_count || 0,
+        clients_count: kpiData.CLIENTS_COUNT || kpiData.clients_count || 0,
+        admins_count: adminCount[0]?.COUNT || adminCount[0]?.count || 0,
+        gestionnaires_count: gestionnaireCount[0]?.COUNT || gestionnaireCount[0]?.count || 0
       }
     });
   } catch (err) {
+    console.error('Error fetching KPIs:', err);
     next(err);
   }
 };

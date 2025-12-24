@@ -132,6 +132,11 @@ FOREIGN KEY (id_entrepot) REFERENCES entrepots(id_entrepot);
 
 COMMENT ON COLUMN utilisateurs.id_entrepot IS 'Entrepot assigned to livreur/gestionnaire';
 
+-- Constraint: Un gestionnaire ne peut gérer qu'un seul entrepot
+-- (id_user dans entrepots doit être unique - un gestionnaire = un entrepot)
+CREATE UNIQUE INDEX idx_entrepot_unique_gestionnaire 
+ON entrepots(id_user);
+
 COMMIT;
 
 PROMPT Tables created successfully!

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth, requireRole } = require('../middleware/auth');
 const {
+  getStats,
   getColisExpedies,
   getColisRecus,
   addColis,
@@ -18,6 +19,9 @@ const {
 // All gestionnaire routes require authentication and GESTIONNAIRE role
 router.use(requireAuth);
 router.use(requireRole('GESTIONNAIRE', 'ADMIN'));
+
+// Statistics
+router.get('/stats', getStats);
 
 // Colis Expédiés
 router.get('/colis/expedies', getColisExpedies);

@@ -502,7 +502,63 @@ const getColisHistory = async (req, res, next) => {
   }
 };
 
+// Get statistics for gestionnaire dashboard
+const getStats = async (req, res, next) => {
+  try {
+    const id_user = req.session.userId;
+    
+    // Get user's entrepot
+    let id_entrepot = req.session.id_entrepot;
+    if (!id_entrepot) {
+      try {
+        const userInfo = await executeQuery(
+          'SELECT id_entrepot FROM utilisateurs WHERE id_utilisateur = :id',
+          { id: id_user }
+        );
+        id_entrepot = userInfo[0]?.ID_ENTREPOT || null;
+        req.session.id_entrepot = id_entrepot;
+      } catch (err) {
+        id_entrepot = null;
+      }
+    }
+    
+    if (!id_entrepot) {
+      return res.status(400).json({
+        success: false,
+        message: 'User must be assigned to an entrepot to view statistics'
+      });
+    }
+    
+    // Get all colis for this gestionnaire's entrepot (both expédiés and reçus)
+    const colis = await executeQuery(
+      `SELECT c.* 
+       FROM v_colis_details c
+       JOIN colis col ON c.id_colis = col.id_colis
+       WHERE col.id_entrepot_localisation = :id_entrepot
+       ORDER BY c.id_colis DESC`,
+      { id_entrepot: id_entrepot }
+    );
+    
+    // Calculate statistics
+    const stats = {
+      totalColis: colis.length,
+      enregistre: colis.filter(c => c.STATUT === 'ENREGISTRE').length,
+      enCours: colis.filter(c => c.STATUT === 'EN_COURS').length,
+      livre: colis.filter(c => c.STATUT === 'LIVRE').length,
+      recuperee: colis.filter(c => c.STATUT === 'RECUPEREE').length
+    };
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
+  getStats,
   getColisExpedies,
   getColisRecus,
   addColis,
