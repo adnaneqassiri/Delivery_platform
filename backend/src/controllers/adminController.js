@@ -33,11 +33,16 @@ const getKPIs = async (req, res, next) => {
       "SELECT COUNT(*) as count FROM utilisateurs WHERE role = 'GESTIONNAIRE' AND actif = 1"
     );
     
+    // Get count of livraisons with statut LIVREE only (not EN_COURS or CREEE)
+    const livraisonsLivreeCount = await executeQuery(
+      "SELECT COUNT(*) as count FROM livraisons WHERE statut = 'LIVREE'"
+    );
+    
     res.json({
       success: true,
       data: {
         colis_count: kpiData.COLIS_COUNT || kpiData.colis_count || 0,
-        livraisons_count: kpiData.LIVRAISONS_COUNT || kpiData.livraisons_count || 0,
+        livraisons_count: livraisonsLivreeCount[0]?.COUNT || livraisonsLivreeCount[0]?.count || 0,
         chiffre_affaire: kpiData.CHIFFRE_AFFAIRE || kpiData.chiffre_affaire || 0,
         livreurs_count: kpiData.LIVREURS_COUNT || kpiData.livreurs_count || 0,
         entrepots_count: kpiData.ENTREPOTS_COUNT || kpiData.entrepots_count || 0,
