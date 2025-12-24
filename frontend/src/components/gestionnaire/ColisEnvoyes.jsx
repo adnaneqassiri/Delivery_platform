@@ -10,6 +10,8 @@ import { COLIS_TYPES, STATUS_COLORS } from '../../utils/constants';
 const ColisEnvoyes = () => {
   const { user, refreshUser } = useAuth();
   const [colis, setColis] = useState([]);
+  const [filteredColis, setFilteredColis] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'enregistre', 'envoye'
   const [clients, setClients] = useState([]);
   const [entrepots, setEntrepots] = useState([]);
   const [userEntrepot, setUserEntrepot] = useState(null);
@@ -33,6 +35,23 @@ const ColisEnvoyes = () => {
     fetchEntrepots();
     fetchUserEntrepot();
   }, []);
+
+  useEffect(() => {
+    // Filter colis based on selected status
+    let filtered = colis;
+    if (statusFilter === 'enregistre') {
+      filtered = colis.filter(c => {
+        const statut = c.STATUT || c.statut || c.STATUS || c.status;
+        return statut === 'ENREGISTRE';
+      });
+    } else if (statusFilter === 'envoye') {
+      filtered = colis.filter(c => {
+        const statut = c.STATUT || c.statut || c.STATUS || c.status;
+        return statut === 'LIVRE';
+      });
+    }
+    setFilteredColis(filtered);
+  }, [colis, statusFilter]);
 
   useEffect(() => {
     if (isAddModalOpen) {
@@ -157,11 +176,16 @@ const ColisEnvoyes = () => {
     { 
       key: 'STATUT', 
       label: 'Status',
-      render: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[value] || 'bg-gray-100 text-gray-800'}`}>
-          {value}
-        </span>
-      )
+      render: (value, row) => {
+        const statut = value || row.statut || row.STATUS || row.status || 'N/A';
+        // Map LIVRE to ENVOYE for display in colis envoyés
+        const displayStatut = statut === 'LIVRE' ? 'ENVOYE' : statut;
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[statut] || 'bg-gray-100 text-gray-800'}`}>
+            {displayStatut}
+          </span>
+        );
+      }
     },
     { key: 'TRAJET', label: 'Route', render: (value) => value || 'N/A' }
   ];
@@ -194,17 +218,31 @@ const ColisEnvoyes = () => {
             </div>
           )}
 
-          <div className="mb-4">
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
-            >
-              + Add Colis
-            </button>
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
+              >
+                + Add Colis
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Filter:</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="all">Tous</option>
+                <option value="enregistre">Enregistré (ENREGISTRE)</option>
+                <option value="envoye">Envoyé (LIVRE)</option>
+              </select>
+            </div>
           </div>
 
           <DataTable
-            data={colis}
+            data={filteredColis}
             columns={columns}
             actions={[
               {
@@ -214,7 +252,10 @@ const ColisEnvoyes = () => {
                   setIsStatusModalOpen(true);
                 },
                 className: 'text-red-600 hover:text-red-900',
-                condition: (row) => row.STATUT !== 'ANNULEE' && row.STATUT !== 'RECUPEREE'
+                condition: (row) => {
+                  const statut = row.STATUT || row.statut || row.STATUS || row.status;
+                  return statut !== 'ANNULEE' && statut !== 'RECUPEREE';
+                }
               }
             ]}
           />

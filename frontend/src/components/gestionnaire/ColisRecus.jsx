@@ -25,6 +25,7 @@ const ColisRecus = () => {
     // Handle both uppercase and lowercase column names from Oracle
     let filtered = colis;
     if (statusFilter === 'recus') {
+      // Filter for colis with status LIVRE (displayed as RECUS)
       filtered = colis.filter(c => {
         const statut = c.STATUT || c.statut || c.STATUS || c.status;
         return statut === 'LIVRE';
@@ -96,9 +97,11 @@ const ColisRecus = () => {
       label: 'Status',
       render: (value, row) => {
         const statut = value || row.statut || row.STATUS || row.status || 'N/A';
+        // Map LIVRE to RECUS for display in colis reçus
+        const displayStatut = statut === 'LIVRE' ? 'RECUS' : statut;
         return (
           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[statut] || 'bg-gray-100 text-gray-800'}`}>
-            {statut}
+            {displayStatut}
           </span>
         );
       }
@@ -154,7 +157,7 @@ const ColisRecus = () => {
                 className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="all">Tous</option>
-                <option value="recus">Reçus (LIVRE)</option>
+                <option value="recus">Reçus (RECUS)</option>
                 <option value="recuperee">Récupérés (RECUPEREE)</option>
               </select>
             </div>
