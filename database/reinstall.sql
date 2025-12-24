@@ -13,8 +13,12 @@ PROMPT Press Ctrl+C to cancel, or Enter to continue...
 PAUSE
 
 PROMPT 
-PROMPT Step 1: Dropping all existing objects...
+PROMPT Step 0: Dropping all existing objects...
 @00_drop_all.sql
+
+PROMPT 
+PROMPT Step 1: Creating user (logitrack IDENTIFIED BY logitrack123)...
+@create_user_pdb.sql
 
 PROMPT 
 PROMPT Step 2: Installing fresh database...
@@ -26,9 +30,9 @@ PROMPT Reinstallation completed successfully!
 PROMPT ========================================
 PROMPT 
 PROMPT You can now use the application with:
-PROMPT   Admin:        username=admin, password=admin123
-PROMPT   Gestionnaire: username=gest1, password=gest123
-PROMPT   Livreur:      username=liv1,  password=liv123
+PROMPT   logitrack_db:    database=logitrack, password=logitrack123
+PROMPT   Admin:        username=admin, password=123
 PROMPT 
+
 
 

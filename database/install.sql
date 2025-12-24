@@ -38,7 +38,5 @@ PROMPT Installation completed successfully!
 PROMPT ========================================
 PROMPT 
 PROMPT You can now use the application with:
-PROMPT   Admin:        username=admin, password=admin123
-PROMPT   Gestionnaire: username=gest1, password=gest123
-PROMPT   Livreur:      username=liv1,  password=liv123
+PROMPT   Admin:        username=admin, password=123
 PROMPT 

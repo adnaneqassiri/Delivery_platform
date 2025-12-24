@@ -114,7 +114,7 @@ This will automatically:
 - Database user: `logitrack` / `logitrack123`
 - App login: `admin` / `admin123`
 
-For detailed instructions, see [database/README.md](database/README.md) or [database/QUICK_START.md](database/QUICK_START.md)
+For detailed instructions, see [database/README.md](database/README.md)
 
 ## Default Test Accounts
 
