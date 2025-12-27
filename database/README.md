@@ -60,22 +60,14 @@ Après l'installation, vous pouvez vous connecter à l'application avec:
 - **Gestionnaire**: `username=gest1`, `password=gest123`
 - **Livreur**: `username=liv1`, `password=liv123`
 
-## 🔄 Réinstallation Complète
 
-Pour réinstaller complètement (supprimer toutes les données et réinstaller):
-
-```sql
-CONNECT logitrack/logitrack123@XEPDB1
-@reinstall.sql
-```
-
-⚠️ **Attention**: Cette opération supprime **TOUTES LES DONNÉES** de manière irréversible !
 
 ### Alternative Manuelle
 
 ```sql
 -- 1. Supprimer tout
 @00_drop_all.sql
+
 
 -- 2. Réinstaller
 @install.sql
